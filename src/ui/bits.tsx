@@ -24,7 +24,17 @@ export function Markdown({ text }: { text: string }) {
 
 function renderPara(para: string, key: string): React.ReactNode {
   if (!para) return null;
-  if (para.startsWith("## ")) return <h2 key={key}>{para.slice(3)}</h2>;
+  if (para.startsWith("## ")) {
+    const newline = para.indexOf("\n");
+    if (newline === -1) return <h2 key={key}>{para.slice(3)}</h2>;
+    // heading followed directly by text: split them
+    return (
+      <React.Fragment key={key}>
+        <h2>{para.slice(3, newline)}</h2>
+        {renderPara(para.slice(newline + 1).trim(), key + "-body")}
+      </React.Fragment>
+    );
+  }
   const lines = para.split("\n");
   if (lines.every((l) => l.startsWith("- "))) {
     return (
