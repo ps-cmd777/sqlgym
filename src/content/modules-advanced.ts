@@ -35,7 +35,7 @@ FROM generate_series('2025-01-01'::date, '2025-01-31'::date, '1 day') gs;
 \`\`\``,
   problems: [
     {
-      id: "p1", title: "Dedup: one row per user", difficulty: 3, schema: "wavely",
+      id: "p1", title: "Each user's first subscription", difficulty: 3, schema: "wavely",
       prompt: "Some users have multiple subscriptions. Return each subscriber's `user_id` and the `plan` of their EARLIEST subscription (lowest started_on; ties by lower sub_id).",
       hint: "ROW_NUMBER PARTITION BY user_id ORDER BY started_on, sub_id → rn = 1.",
       solution: `SELECT user_id, plan FROM (
@@ -63,7 +63,7 @@ ORDER BY longest_streak DESC, user_id`,
       orderSensitive: true, interview: true,
     },
     {
-      id: "p3", title: "Pivot: plan mix by country", difficulty: 3, schema: "wavely",
+      id: "p3", title: "Plan mix by country", difficulty: 3, schema: "wavely",
       prompt: "One row per country that has subscriptions: `country`, `plus_subs`, `premium_subs` (count of subscriptions by plan, counting every subscription row). Alphabetical by country.",
       hint: "Join users; COUNT(*) FILTER (WHERE plan = 'plus') — or SUM(CASE …).",
       solution: `SELECT u.country,
@@ -74,7 +74,7 @@ GROUP BY u.country ORDER BY u.country`,
       orderSensitive: true, interview: true,
     },
     {
-      id: "p4", title: "Date spine: include the zero days", difficulty: 4, schema: "brightmart",
+      id: "p4", title: "Daily orders including zero-order days", difficulty: 4, schema: "brightmart",
       prompt: "For every calendar day in March 2025 (all 31), return `day` and `n_orders` (orders placed that day, any status — 0 where none). Ordered by day.",
       hint: "generate_series('2025-03-01','2025-03-31','1 day') LEFT JOIN orders; COUNT(order_id).",
       solution: `SELECT gs::date AS day, COUNT(o.order_id) AS n_orders
@@ -84,7 +84,7 @@ GROUP BY gs::date ORDER BY day`,
       orderSensitive: true, interview: true,
     },
     {
-      id: "p5", title: "Islands of subscription coverage", difficulty: 4, schema: "wavely",
+      id: "p5", title: "Covered vs lapsed subscribers", difficulty: 4, schema: "wavely",
       prompt: "Call a user 'currently covered' if they have any subscription with cancelled_on IS NULL. Return `covered` (count of covered users) and `lapsed` (users who have subscriptions but all cancelled). One row.",
       hint: "Per-user BOOL_OR(cancelled_on IS NULL) in a CTE; count both groups with FILTER.",
       solution: `WITH per_user AS (
@@ -97,7 +97,7 @@ FROM per_user`,
       interview: true,
     },
     {
-      id: "p6", title: "Top artist per genre, with ties", difficulty: 4, schema: "wavely",
+      id: "p6", title: "Top artist per genre (with ties)", difficulty: 4, schema: "wavely",
       prompt: "By total plays, find the top artist in each genre. If artists tie for the top, include all. Return `genre`, `artist`, `plays`, ordered by genre then artist.",
       hint: "Aggregate plays per (genre, artist); RANK per genre; keep rank 1.",
       solution: `WITH pa AS (
@@ -132,7 +132,7 @@ Stage counts computed from the same population: users → users with X → users
 Thresholds over per-entity aggregates: build the per-user CTE first, then classify with CASE. Never try to segment and aggregate in one pass.`,
   problems: [
     {
-      id: "a1", title: "Day-7+ return rate", difficulty: 4, schema: "wavely",
+      id: "a1", title: "Day-7 return rate", difficulty: 4, schema: "wavely",
       prompt: "Of all users, what share played any track 7 or more days after their signup_date? Return `return_rate` = ROUND(returners::numeric / all_users, 3). One row.",
       hint: "EXISTS with played_on >= signup_date + 7; count with FILTER or AVG of CASE.",
       solution: `SELECT ROUND(
@@ -151,7 +151,7 @@ FROM users GROUP BY 1 ORDER BY cohort_month`,
       orderSensitive: true,
     },
     {
-      id: "a3", title: "Subscription funnel", difficulty: 4, schema: "wavely",
+      id: "a3", title: "Signup-to-subscription funnel", difficulty: 4, schema: "wavely",
       prompt: "One row, three columns: `all_users`, `ever_played` (users with ≥1 play), `ever_subscribed` (users with ≥1 subscription AND ≥1 play — subscribers who also listened).",
       hint: "COUNT(*) FILTER over EXISTS flags — build the flags in a CTE if it helps.",
       solution: `WITH flags AS (
@@ -183,7 +183,7 @@ ORDER BY repeat_rate DESC, country`,
       orderSensitive: true, interview: true,
     },
     {
-      id: "a5", title: "MRR snapshot", difficulty: 4, schema: "wavely",
+      id: "a5", title: "Monthly recurring revenue snapshot", difficulty: 4, schema: "wavely",
       prompt: "Monthly recurring revenue on 2025-12-31: sum of monthly_price over subscriptions active that day (started_on <= date, and cancelled_on is NULL or > date). Return `mrr` (2 decimals). One row.",
       hint: "Careful with the NULL branch of cancelled_on — that's the whole exercise.",
       solution: `SELECT ROUND(SUM(monthly_price)::numeric, 2) AS mrr
@@ -193,7 +193,7 @@ WHERE started_on <= '2025-12-31'
       interview: true,
     },
     {
-      id: "a6", title: "Power-listener segmentation", difficulty: 4, schema: "wavely",
+      id: "a6", title: "Segment users: power, regular, casual", difficulty: 4, schema: "wavely",
       prompt: "Classify users with ≥1 play: 'power' (≥30 plays), 'regular' (10–29), 'casual' (<10). Return `segment` and `n_users`, ordered power → regular → casual.",
       hint: "Per-user counts, CASE to segment, then GROUP BY segment; order with a CASE key.",
       solution: `WITH per_user AS (SELECT user_id, COUNT(*) AS n FROM plays GROUP BY user_id),
@@ -222,7 +222,7 @@ export const interviewSet: Module = {
 Use timed mode on this module: 5 problems, 40 minutes, no hints — the honest rehearsal.`,
   problems: [
     {
-      id: "i1", title: "Best customer per country", difficulty: 4, schema: "brightmart",
+      id: "i1", title: "Top customer per country", difficulty: 4, schema: "brightmart",
       prompt: "For each country, the customer with the highest completed-order spend (quantity × unit_price). Return `country`, `name`, `spend` (2 dp). Break spend ties by customer_id ascending. Order by country.",
       hint: "Spend CTE → ROW_NUMBER per country → rn = 1.",
       solution: `WITH spend AS (
@@ -269,7 +269,7 @@ FROM tracks GROUP BY genre ORDER BY genre`,
       orderSensitive: true, interview: true,
     },
     {
-      id: "i4", title: "Share of skips", difficulty: 4, schema: "wavely",
+      id: "i4", title: "Skip rate by genre", difficulty: 4, schema: "wavely",
       prompt: "Call a play a 'skip' if seconds_played < 30. Per genre with ≥20 plays: `genre`, `plays`, `skip_rate` (ROUND(skips::numeric/plays, 3)), highest skip_rate first, ties by genre.",
       hint: "Join tracks, aggregate with FILTER, HAVING on the count.",
       solution: `SELECT t.genre, COUNT(*) AS plays,
@@ -280,7 +280,7 @@ ORDER BY skip_rate DESC, t.genre`,
       orderSensitive: true, interview: true,
     },
     {
-      id: "i5", title: "Consecutive-month subscribers", difficulty: 4, schema: "wavely",
+      id: "i5", title: "Subscribers active two months running", difficulty: 4, schema: "wavely",
       prompt: "Which users had a subscription active on BOTH 2025-06-15 and 2025-07-15 (same or different subscription rows)? Active = started_on <= day AND (cancelled_on IS NULL OR cancelled_on > day). Return `user_id`, ascending.",
       hint: "Two EXISTS conditions, or INTERSECT of two active-on-day queries.",
       solution: `SELECT DISTINCT user_id FROM subscriptions

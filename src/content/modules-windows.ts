@@ -27,7 +27,7 @@ SELECT * FROM per_customer WHERE spend > 500;
 In a live screen, say what each CTE does as you type it. It buys thinking time and shows structured reasoning — which is what's actually being graded.`,
   problems: [
     {
-      id: "c1", title: "Two-step aggregate", difficulty: 2, schema: "brightmart",
+      id: "c1", title: "Average order value", difficulty: 2, schema: "brightmart",
       prompt: "Using a CTE for per-order item value, return `avg_order_value` (average of completed orders' item totals, 2 decimals). One row.",
       hint: "CTE: SUM per order_id; outer: AVG over completed orders only.",
       solution: `WITH per_order AS (
@@ -39,7 +39,7 @@ WHERE o.status = 'completed'`,
       interview: true,
     },
     {
-      id: "c2", title: "Filter on a computed step", difficulty: 3, schema: "wavely",
+      id: "c2", title: "Users with over an hour of listening", difficulty: 3, schema: "wavely",
       prompt: "A user's listening time is the sum of `seconds_played`. Return `user_id` and `hours` (listening time in hours, 1 decimal) for users with more than 1 hour total, most hours first; ties by user_id.",
       hint: "CTE sums seconds per user; outer converts and filters. ROUND((s/3600.0)::numeric, 1).",
       solution: `WITH listening AS (
@@ -51,7 +51,7 @@ ORDER BY hours DESC, user_id`,
       orderSensitive: true,
     },
     {
-      id: "c3", title: "Compare two aggregates", difficulty: 3, schema: "brightmart",
+      id: "c3", title: "Countries above average revenue", difficulty: 3, schema: "brightmart",
       prompt: "Return countries where completed-order revenue exceeds the average completed-order revenue across all countries. Columns: `country`, `revenue` (2 decimals).",
       hint: "CTE with per-country revenue, then WHERE revenue > (SELECT AVG(...) FROM cte).",
       solution: `WITH rev AS (
@@ -122,7 +122,7 @@ Window functions can't go in WHERE — wrap in a subquery/CTE and filter outside
       solution: "SELECT title, duration_s, DENSE_RANK() OVER (ORDER BY duration_s DESC) AS len_rank FROM tracks",
     },
     {
-      id: "w2", title: "Latest subscription per user", difficulty: 3, schema: "wavely",
+      id: "w2", title: "Each user's latest subscription", difficulty: 3, schema: "wavely",
       prompt: "For each user with any subscription, return `user_id`, `plan`, `started_on` of their most recent subscription (latest started_on; break ties by higher sub_id).",
       hint: "ROW_NUMBER PARTITION BY user_id ORDER BY started_on DESC, sub_id DESC; keep rn = 1.",
       solution: `SELECT user_id, plan, started_on FROM (
@@ -147,7 +147,7 @@ SELECT category, product_name, u AS units FROM (
       interview: true,
     },
     {
-      id: "w4", title: "RANK with gaps, on purpose", difficulty: 3, schema: "brightmart",
+      id: "w4", title: "Rank countries by customer count", difficulty: 3, schema: "brightmart",
       prompt: "Rank countries by number of customers (RANK — ties share a rank and create gaps). Return `country`, `n_customers`, `country_rank`, ordered by rank then country.",
       hint: "Aggregate per country in a CTE, then RANK() OVER (ORDER BY n DESC).",
       solution: `WITH n AS (SELECT country, COUNT(*) AS n_customers FROM customers GROUP BY country)
@@ -156,7 +156,7 @@ FROM n ORDER BY country_rank, country`,
       orderSensitive: true,
     },
     {
-      id: "w5", title: "Second-highest spender", difficulty: 4, schema: "brightmart",
+      id: "w5", title: "The second-highest spender", difficulty: 4, schema: "brightmart",
       prompt: "Find the customer(s) with the SECOND-highest completed-order spend (quantity × unit_price). Return `customer_id` and `spend` (2 decimals). If several tie for second, return all of them. Use DENSE_RANK.",
       hint: "Per-customer spend CTE → DENSE_RANK ORDER BY spend DESC → keep rank 2.",
       solution: `WITH spend AS (
@@ -203,7 +203,7 @@ AVG(v) OVER (ORDER BY d ROWS BETWEEN 6 PRECEDING AND CURRENT ROW)
 Always state the frame in your head: *partition, order, frame*. Most wrong window answers are a missing PARTITION BY or an unintended default frame.`,
   problems: [
     {
-      id: "o1", title: "Days between plays", difficulty: 3, schema: "wavely",
+      id: "o1", title: "Days between a user's plays", difficulty: 3, schema: "wavely",
       prompt: "For user 1's distinct play dates, return `played_on` and `days_since_prev` (difference in days from the previous distinct date; NULL for the first). Order by date.",
       hint: "DISTINCT dates in a CTE, then played_on - LAG(played_on) OVER (ORDER BY played_on).",
       solution: `WITH d AS (SELECT DISTINCT played_on FROM plays WHERE user_id = 1)
@@ -212,7 +212,7 @@ FROM d ORDER BY played_on`,
       orderSensitive: true,
     },
     {
-      id: "o2", title: "Running revenue", difficulty: 3, schema: "brightmart",
+      id: "o2", title: "Daily revenue with running total", difficulty: 3, schema: "brightmart",
       prompt: "Daily completed-order item revenue, with a running total: `ordered_on`, `day_revenue` (2 decimals), `cumulative_revenue` (2 decimals), ordered by date.",
       hint: "Aggregate per day in a CTE; SUM(day) OVER (ORDER BY day) for the cumulative.",
       solution: `WITH daily AS (
@@ -227,7 +227,7 @@ FROM daily ORDER BY ordered_on`,
       orderSensitive: true, interview: true,
     },
     {
-      id: "o3", title: "7-row moving average", difficulty: 4, schema: "brightmart",
+      id: "o3", title: "7-day moving average of revenue", difficulty: 4, schema: "brightmart",
       prompt: "Over the daily revenue series from the previous problem, add `ma7`: the average of the current and previous 6 revenue days (ROWS frame), 2 decimals. Return `ordered_on`, `ma7`, ordered by date.",
       hint: "AVG(r) OVER (ORDER BY d ROWS BETWEEN 6 PRECEDING AND CURRENT ROW).",
       solution: `WITH daily AS (
@@ -242,7 +242,7 @@ FROM daily ORDER BY ordered_on`,
       orderSensitive: true, interview: true,
     },
     {
-      id: "o4", title: "Genre share of listening", difficulty: 3, schema: "wavely",
+      id: "o4", title: "Genre share of total listening", difficulty: 3, schema: "wavely",
       prompt: "Share of total seconds_played by genre: `genre`, `pct` (percent of all listening seconds, 1 decimal), largest first; ties by genre.",
       hint: "Aggregate per genre, then 100 * s / SUM(s) OVER ().",
       solution: `WITH g AS (
@@ -255,7 +255,7 @@ FROM g ORDER BY pct DESC, genre`,
       orderSensitive: true, interview: true,
     },
     {
-      id: "o5", title: "Month-over-month growth", difficulty: 4, schema: "brightmart",
+      id: "o5", title: "Month-over-month revenue growth", difficulty: 4, schema: "brightmart",
       prompt: "Monthly completed revenue with growth vs the previous month: `month` (first day of month, date), `revenue` (2 dp), `growth_pct` (percent change vs previous month, 1 dp; NULL for the first month). Ordered by month.",
       hint: "date_trunc('month', ordered_on)::date; LAG(revenue) for the denominator.",
       solution: `WITH m AS (
@@ -270,7 +270,7 @@ FROM m ORDER BY month`,
       orderSensitive: true, interview: true,
     },
     {
-      id: "o6", title: "First and most recent play gap", difficulty: 4, schema: "wavely",
+      id: "o6", title: "Each user's active span", difficulty: 4, schema: "wavely",
       prompt: "For each user with 2+ plays: `user_id`, `active_span_days` (days between first and last play date), `n_plays`. Order by span descending, then user_id.",
       hint: "MIN/MAX of played_on per user; subtracting dates yields integer days.",
       solution: `SELECT user_id, MAX(played_on) - MIN(played_on) AS active_span_days, COUNT(*) AS n_plays

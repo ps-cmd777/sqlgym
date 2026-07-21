@@ -38,40 +38,40 @@ If a result ever has mysteriously few rows, your first suspect is a NULL meeting
 Every column in SELECT must either be inside an aggregate (COUNT, SUM, AVG, MIN, MAX) or listed in GROUP BY. The database enforces this because, for a collapsed group, it wouldn't know WHICH row's value to display.`,
   problems: [
     {
-      id: "f1", title: "Warm-up: filter and sort", difficulty: 1, schema: "wavely",
+      id: "f1", title: "German users by signup date", difficulty: 1, schema: "wavely",
       prompt: "List the `username` and `signup_date` of users from Germany ('DE'), earliest signup first. Return exactly those two columns in that order.",
       hint: "WHERE on country, ORDER BY signup_date ascending.",
       solution: "SELECT username, signup_date FROM users WHERE country = 'DE' ORDER BY signup_date",
       orderSensitive: true,
     },
     {
-      id: "f2", title: "COUNT(*) vs COUNT(col)", difficulty: 2, schema: "wavely",
+      id: "f2", title: "Total users vs referred users", difficulty: 2, schema: "wavely",
       prompt: "Return one row with two columns: `total_users` (all users) and `referred_users` (users whose `referred_by` is not NULL).",
       hint: "COUNT(col) skips NULLs — you don't need a WHERE or a CASE.",
       solution: "SELECT COUNT(*) AS total_users, COUNT(referred_by) AS referred_users FROM users",
     },
     {
-      id: "f3", title: "The != NULL trap", difficulty: 2, schema: "brightmart",
+      id: "f3", title: "Count non-cancelled orders (NULL-safe)", difficulty: 2, schema: "brightmart",
       prompt: "Count orders whose status is anything other than 'cancelled'. (Careful: what would happen if status could be NULL? Write it NULL-safely with IS DISTINCT FROM.) Return one column `n`.",
       hint: "status IS DISTINCT FROM 'cancelled' treats NULL as \"different\", unlike !=.",
       solution: "SELECT COUNT(*) AS n FROM orders WHERE status IS DISTINCT FROM 'cancelled'",
     },
     {
-      id: "f4", title: "Group and filter groups", difficulty: 2, schema: "wavely",
+      id: "f4", title: "Countries with 5 or more users", difficulty: 2, schema: "wavely",
       prompt: "For each country with at least 5 users, return `country` and `n_users`, most users first; break ties by country alphabetically.",
       hint: "GROUP BY + HAVING COUNT(*) >= 5, then ORDER BY count DESC, country.",
       solution: "SELECT country, COUNT(*) AS n_users FROM users GROUP BY country HAVING COUNT(*) >= 5 ORDER BY n_users DESC, country",
       orderSensitive: true,
     },
     {
-      id: "f5", title: "Aggregate arithmetic", difficulty: 3, schema: "brightmart",
+      id: "f5", title: "Total units sold and revenue", difficulty: 3, schema: "brightmart",
       prompt: "Across all order items, return the total units sold (`units`) and total gross revenue (`revenue`, quantity × unit_price, rounded to 2 decimals). One row.",
       hint: "SUM(quantity) and SUM(quantity * unit_price); ROUND(x::numeric, 2).",
       solution: "SELECT SUM(quantity) AS units, ROUND(SUM(quantity * unit_price)::numeric, 2) AS revenue FROM order_items",
       interview: true,
     },
     {
-      id: "f6", title: "Distinct with a condition", difficulty: 3, schema: "wavely",
+      id: "f6", title: "Active users in March 2025", difficulty: 3, schema: "wavely",
       prompt: "How many distinct users played at least one track in March 2025? Return one column `active_users`.",
       hint: "COUNT(DISTINCT user_id) with a date range on played_on.",
       solution: "SELECT COUNT(DISTINCT user_id) AS active_users FROM plays WHERE played_on >= '2025-03-01' AND played_on < '2025-04-01'",
@@ -127,7 +127,7 @@ The fix: total up the "many" side FIRST (one row per order), then join. Whenever
 If you LEFT JOIN orders and then write \`WHERE o.status = 'completed'\`, the NULL rows fail that filter and vanish — your LEFT JOIN silently became an INNER JOIN. Conditions about the right-hand table belong in the \`ON\` clause instead.`,
   problems: [
     {
-      id: "j1", title: "Basic enrichment join", difficulty: 1, schema: "brightmart",
+      id: "j1", title: "Orders with customer names", difficulty: 1, schema: "brightmart",
       prompt: "List each completed order's `order_id`, `ordered_on`, and the customer's `name`. Columns in that order.",
       hint: "INNER JOIN customers ON customer_id; filter status = 'completed'.",
       solution: "SELECT o.order_id, o.ordered_on, c.name FROM orders o JOIN customers c ON c.customer_id = o.customer_id WHERE o.status = 'completed'",
@@ -140,20 +140,20 @@ If you LEFT JOIN orders and then write \`WHERE o.status = 'completed'\`, the NUL
       orderSensitive: true, interview: true,
     },
     {
-      id: "j3", title: "Self join: who referred whom", difficulty: 2, schema: "wavely",
+      id: "j3", title: "Who referred whom", difficulty: 2, schema: "wavely",
       prompt: "For every referred user, return `referred` (their username) and `referrer` (the username of who referred them).",
       hint: "Join users to itself: u.referred_by = r.user_id.",
       solution: "SELECT u.username AS referred, r.username AS referrer FROM users u JOIN users r ON r.user_id = u.referred_by",
     },
     {
-      id: "j4", title: "LEFT JOIN kept honest", difficulty: 3, schema: "brightmart",
+      id: "j4", title: "Completed orders per customer (including zero)", difficulty: 3, schema: "brightmart",
       prompt: "For EVERY customer, return `name` and `completed_orders` (count of their completed orders — 0 if none). Don't lose customers without orders.",
       hint: "LEFT JOIN with the status condition in ON, not WHERE; COUNT(o.order_id).",
       solution: "SELECT c.name, COUNT(o.order_id) AS completed_orders FROM customers c LEFT JOIN orders o ON o.customer_id = c.customer_id AND o.status = 'completed' GROUP BY c.name",
       interview: true,
     },
     {
-      id: "j5", title: "Defuse the fan-out", difficulty: 4, schema: "brightmart",
+      id: "j5", title: "Order value and refund without double-counting", difficulty: 4, schema: "brightmart",
       prompt: "For each completed order return `order_id`, `items_value` (sum of quantity × unit_price) and the order's single `refund_amount` (NULL if never refunded; an order has at most one refund). Beware: joining items and refunds together multiplies rows.",
       hint: "Aggregate order_items in a subquery first, then LEFT JOIN refunds to the result.",
       solution: `SELECT o.order_id, iv.items_value, r.amount AS refund_amount
@@ -222,26 +222,26 @@ Separately, SQL can combine the results of two complete queries:
 Both sides must return the same number and types of columns — you're stacking two lists of the same shape.`,
   problems: [
     {
-      id: "s1", title: "Above-average price", difficulty: 2, schema: "brightmart",
+      id: "s1", title: "Products priced above average", difficulty: 2, schema: "brightmart",
       prompt: "Return `product_name` and `price` of products priced strictly above the overall average price.",
       hint: "Compare to a scalar subquery: (SELECT AVG(price) FROM products).",
       solution: "SELECT product_name, price FROM products WHERE price > (SELECT AVG(price) FROM products)",
     },
     {
-      id: "s2", title: "EXISTS as a semi-join", difficulty: 2, schema: "wavely",
+      id: "s2", title: "Users with any subscription", difficulty: 2, schema: "wavely",
       prompt: "Return the `username` of users who have at least one subscription (any plan, past or present).",
       hint: "WHERE EXISTS (SELECT 1 FROM subscriptions s WHERE s.user_id = u.user_id).",
       solution: "SELECT u.username FROM users u WHERE EXISTS (SELECT 1 FROM subscriptions s WHERE s.user_id = u.user_id)",
     },
     {
-      id: "s3", title: "NOT EXISTS beats NOT IN", difficulty: 3, schema: "wavely",
+      id: "s3", title: "Users who never played track 1", difficulty: 3, schema: "wavely",
       prompt: "Return the `username` of users who never played track 1. Note `referred_by` contains NULLs elsewhere in this schema — write the membership test the NULL-safe way.",
       hint: "NOT EXISTS with a correlated subquery on plays filtered to track_id = 1.",
       solution: "SELECT u.username FROM users u WHERE NOT EXISTS (SELECT 1 FROM plays p WHERE p.user_id = u.user_id AND p.track_id = 1)",
       interview: true,
     },
     {
-      id: "s4", title: "Correlated: beat your country", difficulty: 4, schema: "brightmart",
+      id: "s4", title: "Customers who outspend their country average", difficulty: 4, schema: "brightmart",
       prompt: "A customer's spend is the total quantity × unit_price across their completed orders. Return `customer_id` and `spend` (2 decimals) for customers whose spend is strictly greater than the average spend of customers in the same country (average computed over customers who have spend).",
       hint: "Build per-customer spend in a CTE with country; then a correlated subquery per country.",
       solution: `WITH spend AS (
@@ -257,7 +257,7 @@ WHERE s > (SELECT AVG(s) FROM spend b WHERE b.country = a.country)`,
       interview: true,
     },
     {
-      id: "s5", title: "INTERSECT two behaviors", difficulty: 3, schema: "wavely",
+      id: "s5", title: "Users who played both jazz and rock", difficulty: 3, schema: "wavely",
       prompt: "Return the `user_id` of users who played at least one 'jazz' track AND at least one 'rock' track (any time).",
       hint: "Two SELECT DISTINCT user_id queries joined with INTERSECT.",
       solution: `SELECT p.user_id FROM plays p JOIN tracks t ON t.track_id = p.track_id WHERE t.genre = 'jazz'
@@ -266,7 +266,7 @@ SELECT p.user_id FROM plays p JOIN tracks t ON t.track_id = p.track_id WHERE t.g
       interview: true,
     },
     {
-      id: "s6", title: "EXCEPT for churn candidates", difficulty: 3, schema: "wavely",
+      id: "s6", title: "Active in February, gone in March", difficulty: 3, schema: "wavely",
       prompt: "Return `user_id` of users who played something in February 2025 but nothing in March 2025.",
       hint: "February players EXCEPT March players.",
       solution: `SELECT DISTINCT user_id FROM plays WHERE played_on >= '2025-02-01' AND played_on < '2025-03-01'
