@@ -6,32 +6,44 @@ export const patterns: Module = {
   id: "patterns",
   title: "Advanced patterns", track: "interview",
   blurb: "Streaks, duplicates, pivot tables, missing dates — problems so common in interviews they have names.",
-  theory: `## Dedup (keep one row per entity)
-\`ROW_NUMBER() OVER (PARTITION BY key ORDER BY tiebreaker)\` then keep \`rn = 1\`. State your tiebreaker out loud.
+  theory: `Named patterns — so common in interviews they have nicknames. Recognize the shape, apply the recipe.
 
-## Gaps & islands — the streak trick
-For consecutive dates: \`date - ROW_NUMBER() * INTERVAL\` is constant within a run. In Postgres, \`date - ROW_NUMBER()::int\` works directly on DATE:
-\`\`\`sql
-WITH d AS (SELECT DISTINCT user_id, played_on FROM plays),
-grp AS (
-  SELECT user_id, played_on,
-         played_on - ROW_NUMBER() OVER (
-           PARTITION BY user_id ORDER BY played_on)::int AS island
-  FROM d
-)
-SELECT user_id, COUNT(*) AS streak_len
-FROM grp GROUP BY user_id, island;
+## Deduplicate: keep one row per entity
+Data has repeats; you want one each. \`ROW_NUMBER()\` per entity, keep \`rn = 1\`. State the tiebreaker aloud ("keep earliest by date, ties by id").
+
+## Gaps & islands: consecutive runs (streaks)
+The famous one. "Longest streak of consecutive active days." The trick: **subtract a row number from the date.** Within an unbroken run, that difference is constant — a ready-made group key.
+
 \`\`\`
-Rows in the same island belong to one unbroken streak. This exact trick is asked constantly.
+day     | ROW_NUMBER | day - rn
+Mar 01  |     1      | Feb 28   |
+Mar 02  |     2      | Feb 28   | island A (3 in a row)
+Mar 03  |     3      | Feb 28   |
+Mar 07  |     4      | Mar 03   | island B (gap broke it)
+Mar 08  |     5      | Mar 03   |
+\`\`\`
+
+Group by that constant, count per group = streak lengths. Memorize this shape.
 
 ## Pivot without PIVOT
-Conditional aggregation: \`SUM(CASE WHEN genre = 'jazz' THEN 1 ELSE 0 END) AS jazz\` — or Postgres's cleaner \`COUNT(*) FILTER (WHERE genre = 'jazz')\`.
+Rows into columns with conditional counts. Postgres's clean way is \`FILTER\`:
 
-## Date spine
-Aggregating only rows that exist silently skips empty days. Generate the calendar and LEFT JOIN data onto it:
 \`\`\`sql
-SELECT gs::date AS day
-FROM generate_series('2025-01-01'::date, '2025-01-31'::date, '1 day') gs;
+SELECT country,
+       COUNT(*) FILTER (WHERE plan = 'plus')    AS plus,
+       COUNT(*) FILTER (WHERE plan = 'premium') AS premium
+FROM subscriptions GROUP BY country;
+\`\`\`
+(Portable version: \`SUM(CASE WHEN plan='plus' THEN 1 ELSE 0 END)\`.)
+
+## Date spine: don't skip empty days
+Counting only days with rows silently drops zero days — a chart with holes. Generate the calendar, LEFT JOIN data onto it:
+
+\`\`\`sql
+SELECT d::date AS day, COUNT(o.order_id) AS orders
+FROM generate_series('2025-03-01'::date, '2025-03-31', '1 day') d
+LEFT JOIN orders o ON o.ordered_on = d::date
+GROUP BY d ORDER BY day;
 \`\`\``,
   problems: [
     {
@@ -117,19 +129,46 @@ export const analytics: Module = {
   id: "analytics",
   title: "Product analytics", track: "interview",
   blurb: "The questions companies actually ask: do users come back? where do they drop off? who are the best customers?",
-  theory: `## Retention, defined precisely
-"Week-1 retention of the March signup cohort" = of users who signed up in March, what share did the thing again 7–13 days after signup? Interview answers live or die on the precision of the window definition — state yours before writing SQL.
+  theory: `Questions companies pay analysts to answer. Each has a precise definition — nail it before writing SQL.
 
-## The cohort shape
-1. Anchor each user (signup date, first order…).
-2. Join activity; bucket the distance: \`(activity_date - anchor_date)\`.
-3. Aggregate: distinct users per cohort per bucket, divide by cohort size.
+## Retention: did users come back?
+"Day-7 retention" = of users who signed up, what share did something again 7+ days later? Interview lives or dies on **defining the window precisely**. State yours first: "signed up in March, AND active on day 7 or later."
 
-## Funnels
-Stage counts computed from the same population: users → users with X → users with X then Y. Use EXISTS chains or aggregated flags with FILTER. Order events by time when the funnel demands sequence.
+\`\`\`sql
+SELECT ROUND(COUNT(*) FILTER (WHERE came_back)::numeric / COUNT(*), 3) AS retention
+FROM (
+  SELECT u.user_id,
+         EXISTS (SELECT 1 FROM plays p
+                 WHERE p.user_id = u.user_id
+                   AND p.played_on >= u.signup_date + 7) AS came_back
+  FROM users u
+) t;
+\`\`\`
 
-## Power users / segmentation
-Thresholds over per-entity aggregates: build the per-user CTE first, then classify with CASE. Never try to segment and aggregate in one pass.`,
+## Funnels: where do people drop off?
+Count the same population at each stage: all users -> did X -> did X then Y. Per-user boolean flags, count with FILTER:
+
+\`\`\`
+stage         | users
+signed up     | 1000
+   played     |  700   (70% reached step 2)
+   subscribed |  120   (12% reached step 3)
+\`\`\`
+
+## Cohorts: group by when they joined
+Bucket users by signup month, measure each bucket over time. \`date_trunc('month', signup_date)\` is the cohort key.
+
+## Segmentation: label by behavior
+Thresholds over per-user aggregates. **Build the per-user CTE first, then classify** — never aggregate and bucket in one pass:
+
+\`\`\`sql
+WITH per_user AS (SELECT user_id, COUNT(*) AS plays FROM plays GROUP BY user_id)
+SELECT CASE WHEN plays >= 30 THEN 'power'
+            WHEN plays >= 10 THEN 'regular'
+            ELSE 'casual' END AS segment,
+       COUNT(*) AS users
+FROM per_user GROUP BY 1;
+\`\`\``,
   problems: [
     {
       id: "a1", title: "Day-7 return rate", difficulty: 4, schema: "wavely",

@@ -79,26 +79,39 @@ export const hierarchy: Module = {
   id: "hierarchy",
   title: "Recursive queries", track: "advanced",
   blurb: "Who reports to whom, up and down any number of levels — the advanced topic that separates senior candidates.",
-  theory: `## The shape of a tree in SQL
-One table, one self-reference: \`employees(emp_id, manager_id)\`. The CEO's manager_id is NULL. One level down is a self-join; *any* depth needs recursion.
+  theory: `## Tree data lives in one self-referencing table
+An org chart is \`employees(emp_id, manager_id)\` — each row points to its boss. The CEO's \`manager_id\` is NULL.
 
-## WITH RECURSIVE, demystified
-\`\`\`sql
-WITH RECURSIVE reports AS (
-  SELECT emp_id, name, 1 AS depth          -- anchor: where to start
-  FROM employees WHERE manager_id = 2
-  UNION ALL
-  SELECT e.emp_id, e.name, r.depth + 1     -- step: children of the previous rows
-  FROM employees e
-  JOIN reports r ON e.manager_id = r.emp_id
-)
-SELECT * FROM reports;
 \`\`\`
-The anchor runs once; the recursive member runs repeatedly on the rows added in the previous round, until a round adds nothing. Narrate it exactly like that in interviews.
+emp_id | name   | manager_id
+1      | Ana    | NULL        (CEO)
+2      | Boris  | 1           (reports to Ana)
+3      | Carmen | 2           (reports to Boris)
+4      | Dev    | 2
+\`\`\`
 
-## Two habits
-- Carry \`depth\` even when unasked — it debugs infinite loops and answers the inevitable follow-up.
-- Path strings (\`path || ' > ' || name\`) make hierarchies readable and demo well.`,
+One level down (Ana's direct reports) is a plain self-join. But "everyone under Ana, all the way down" needs **recursion** — you don't know how deep the tree goes.
+
+## WITH RECURSIVE, step by step
+\`\`\`sql
+WITH RECURSIVE chain AS (
+  SELECT emp_id, name, 1 AS depth          -- ANCHOR: where to start
+  FROM employees WHERE manager_id = 1
+  UNION ALL
+  SELECT e.emp_id, e.name, chain.depth + 1 -- STEP: children of rows so far
+  FROM employees e
+  JOIN chain ON e.manager_id = chain.emp_id
+)
+SELECT * FROM chain;
+\`\`\`
+
+How it runs: the **anchor** runs once (Ana's direct reports). Then the **step** repeats — each round finds the children of the rows the previous round added — until a round finds nobody.
+
+Trace: round 1 finds Boris. Round 2 finds Boris's reports (Carmen, Dev). Round 3 finds theirs (none) -> stop.
+
+## Two habits that save you
+- **Carry \`depth\`** even when unasked — answers the "how many levels?" follow-up and catches a runaway query.
+- **Path strings**: \`parent_path || ' > ' || name\` builds "Ana > Boris > Carmen" — reads beautifully, demos understanding.`,
   problems: [
     {
       id: "h1", title: "Direct reports per manager", difficulty: 2, schema: "orbit",

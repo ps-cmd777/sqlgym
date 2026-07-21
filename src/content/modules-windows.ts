@@ -6,25 +6,36 @@ export const ctes: Module = {
   id: "ctes",
   title: "Common Table Expressions (CTEs)", track: "interview",
   blurb: "WITH lets you name intermediate results and build complex answers step by step — like showing your work in math.",
-  theory: `## WITH is a workbench
-A CTE names an intermediate result. Chains of small CTEs beat one clever nested query in every interview: they're debuggable step by step, and you can narrate them.
+  theory: `## A CTE is a named step
+\`WITH\` lets you compute something, name it, and reuse it — like defining a variable mid-query. Instead of one giant nested query, you build up in readable steps.
+
+Each customer's total spend. Step 1: total each order. Step 2: total each customer.
 
 \`\`\`sql
-WITH per_order AS (
+WITH order_totals AS (            -- step 1: one row per order
   SELECT order_id, SUM(quantity * unit_price) AS order_value
-  FROM order_items GROUP BY order_id
-),
-per_customer AS (
-  SELECT o.customer_id, SUM(p.order_value) AS spend
-  FROM orders o JOIN per_order p USING (order_id)
-  WHERE o.status = 'completed'
-  GROUP BY o.customer_id
+  FROM order_items
+  GROUP BY order_id
 )
-SELECT * FROM per_customer WHERE spend > 500;
+SELECT o.customer_id, SUM(t.order_value) AS spend   -- step 2: roll up
+FROM orders o
+JOIN order_totals t ON t.order_id = o.order_id
+GROUP BY o.customer_id;
 \`\`\`
 
-## Narrate while you write
-In a live screen, say what each CTE does as you type it. It buys thinking time and shows structured reasoning — which is what's actually being graded.`,
+\`order_totals\` acts like a temporary table that exists only for this query. The final SELECT reads from it as if it were real.
+
+## Why interviewers love CTEs
+Chained CTEs read top-to-bottom like a story. In a live interview you *narrate* each step as you type — "first I total each order, then I sum per customer." That narration is often what's actually graded, more than the final query.
+
+## Chain as many as you need
+\`\`\`sql
+WITH a AS (...),
+     b AS (SELECT ... FROM a ...),   -- b can use a
+     c AS (SELECT ... FROM b ...)    -- c can use b
+SELECT * FROM c;
+\`\`\`
+Each step can use every step above it. Build complexity one debuggable layer at a time.`,
   problems: [
     {
       id: "c1", title: "Average order value", difficulty: 2, schema: "brightmart",
@@ -93,27 +104,45 @@ export const windows1: Module = {
   id: "windows1",
   title: "Window functions: ranking", track: "interview",
   blurb: "\"Top 3 products per category\", \"each user's latest order\" — the two most-asked interview questions, one technique.",
-  theory: `## Aggregate vs window
-\`GROUP BY\` collapses rows; a window function computes across related rows **without collapsing**. Syntax: \`fn() OVER (PARTITION BY … ORDER BY …)\`.
+  theory: `## Window functions vs GROUP BY
+\`GROUP BY\` **collapses** many rows into one. A window function computes across related rows but **keeps every row**. You get an aggregate *and* the detail, side by side.
 
-## The ranking trio
-On values 100, 90, 90, 80:
-- \`ROW_NUMBER()\` → 1,2,3,4 (arbitrary tie order — add a tiebreaker!)
-- \`RANK()\` → 1,2,2,4 (gaps)
-- \`DENSE_RANK()\` → 1,2,2,3 (no gaps)
-Ties are the interview probe: "what if two rows have the same value?" Have an answer before they ask.
+Syntax: \`fn() OVER (PARTITION BY … ORDER BY …)\`. PARTITION BY = which group; ORDER BY = order within it.
 
-## The two patterns to drill until automatic
-**Top-N per group** and **latest record per entity**:
-\`\`\`sql
-SELECT * FROM (
-  SELECT s.*, ROW_NUMBER() OVER (
-    PARTITION BY user_id ORDER BY started_on DESC, sub_id DESC
-  ) AS rn
-  FROM subscriptions s
-) t WHERE rn = 1;
+## The ranking trio — see the difference
+Ranking scores 100, 90, 90, 80:
+
 \`\`\`
-Window functions can't go in WHERE — wrap in a subquery/CTE and filter outside.`,
+score | ROW_NUMBER | RANK | DENSE_RANK
+100   |     1      |  1   |     1
+90    |     2      |  2   |     2
+90    |     3      |  2   |     2
+80    |     4      |  4   |     3
+\`\`\`
+
+- \`ROW_NUMBER()\` — always 1,2,3,4. Ties broken arbitrarily, so **add a tiebreaker** or results wobble.
+- \`RANK()\` — ties share a rank, then **skips** (…2,2,4).
+- \`DENSE_RANK()\` — ties share a rank, **no skip** (…2,2,3).
+
+"What happens on a tie?" is the #1 window-function interview probe. Pick the right one before you type.
+
+## Top-N per group (drill until automatic)
+"Top 2 products per category": rank *within* each category, keep ranks ≤ 2.
+
+\`\`\`sql
+SELECT category, product_name, units FROM (
+  SELECT category, product_name,
+         ROW_NUMBER() OVER (PARTITION BY category ORDER BY units DESC, product_id) AS rn
+  FROM product_sales
+) ranked
+WHERE rn <= 2;
+\`\`\`
+
+## Latest record per entity (the other must-know)
+Same shape, keep \`rn = 1\`: PARTITION BY the entity, ORDER BY date DESC, keep the top row = each entity's most recent row.
+
+## The rule that trips beginners
+A window function **cannot go in WHERE** — WHERE runs before the window is computed. Wrap it in a subquery or CTE, then filter on the result.`,
   problems: [
     {
       id: "w1", title: "Rank tracks by length", difficulty: 2, schema: "wavely",
@@ -187,20 +216,43 @@ export const windows2: Module = {
   id: "windows2",
   title: "Window functions: analytics", track: "interview",
   blurb: "Compare each row to the previous one, build running totals and moving averages — the heart of trend analysis.",
-  theory: `## Offset functions
-\`LAG(col) OVER (PARTITION BY … ORDER BY …)\` reads the previous row; \`LEAD\` the next. Day-over-day deltas, time-between-events, churn gaps — all LAG.
+  theory: `## Look at the previous row: LAG
+\`LAG(col) OVER (ORDER BY …)\` gives the value from the row before; \`LEAD\` the next. Change-over-time without a self-join.
 
-## Frames: what \`SUM(...) OVER (ORDER BY …)\` really means
-With ORDER BY, the default frame is *start through current row* — that's why it produces a running total. A moving window is explicit:
-\`\`\`sql
-AVG(v) OVER (ORDER BY d ROWS BETWEEN 6 PRECEDING AND CURRENT ROW)
+Daily revenue with each day's change:
+
+\`\`\`
+day     | revenue | LAG(revenue) | change
+Mar 01  |  1000   |    NULL      |  NULL   (no previous day)
+Mar 02  |  1200   |    1000      |  +200
+Mar 03  |   900   |    1200      |  -300
 \`\`\`
 
-## Percent of total
-\`v / SUM(v) OVER ()\` — an unpartitioned window sees everything. No self-join needed.
+The first row's LAG is NULL — nothing before it. Expected; handle it.
 
-## A habit that prevents wrong answers
-Always state the frame in your head: *partition, order, frame*. Most wrong window answers are a missing PARTITION BY or an unintended default frame.`,
+## Running totals: SUM with ORDER BY
+\`SUM(x) OVER (ORDER BY day)\` isn't a grand total. With ORDER BY, the window means "start through this row" — a running total:
+
+\`\`\`
+day     | revenue | running_total
+Mar 01  |  1000   |   1000
+Mar 02  |  1200   |   2200
+Mar 03  |   900   |   3100
+\`\`\`
+
+## Moving average: an explicit frame
+"Average of the last 7 days" — spell out the frame:
+
+\`\`\`sql
+AVG(revenue) OVER (ORDER BY day ROWS BETWEEN 6 PRECEDING AND CURRENT ROW)
+\`\`\`
+This row plus the 6 before it = a 7-row window that slides down.
+
+## Percent of total: an empty OVER()
+\`x / SUM(x) OVER ()\` — empty \`OVER ()\` sees every row, giving the grand total as denominator. No self-join.
+
+## The habit that prevents wrong answers
+Before any window, say three things: **partition** (which group?), **order** (what sequence?), **frame** (how many rows?). Most wrong answers are a missing PARTITION BY or an unintended default frame.`,
   problems: [
     {
       id: "o1", title: "Days between a user's plays", difficulty: 3, schema: "wavely",
