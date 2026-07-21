@@ -4,6 +4,7 @@ import { foundations, joins, subqueries } from "./modules-core";
 import { expressions, hierarchy, mutations } from "./modules-extended";
 import { ctes, windows1, windows2 } from "./modules-windows";
 import type { Module, Problem } from "./types";
+import { EXTRA } from "./extra-problems";
 import { withVariants } from "./variants";
 
 // Topic tags derived from the solution SQL — one source of truth, no manual
@@ -50,7 +51,10 @@ function tag(p: Problem): Problem {
 export const MODULES: Module[] = withVariants([
   warmups, foundations, joins, subqueries, expressions, ctes, windows1, windows2,
   patterns, hierarchy, mutations, analytics, interviewSet,
-]).map((m) => ({ ...m, problems: m.problems.map(tag) }));
+]).map((m) => ({
+  ...m,
+  problems: [...m.problems, ...(EXTRA[m.id] ?? [])].map(tag),
+}));
 
 export const ALL_PROBLEMS: Problem[] = MODULES.flatMap((m) => m.problems);
 
