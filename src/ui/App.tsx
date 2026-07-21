@@ -161,70 +161,60 @@ function ModuleView({ id, progress }: { id: string; progress: Progress }) {
   );
 }
 
+interface TablePreview { name: string; sample: QueryResult; }
+
+/** Clean schema browser: each table shown as a card with its columns as the
+ *  header and 3 real sample rows — always visible, the way DataLemur /
+ *  StrataScratch show the data you're querying. No raw type dumps. */
 function SchemaMini({ problem }: { problem: Problem }) {
-  const [cols, setCols] = useState<QueryResult | null>(null);
-  const [openTable, setOpenTable] = useState<string | null>(null);
-  const [sample, setSample] = useState<QueryResult | null>(null);
+  const [tables, setTables] = useState<TablePreview[] | null>(null);
   useEffect(() => {
-    setOpenTable(null); setSample(null);
-    runQuery(problem.schema, "visible",
-      `SELECT table_name, string_agg(column_name || ' ' || data_type, ', ' ORDER BY ordinal_position) AS cols
-       FROM information_schema.columns WHERE table_schema = 'public'
-       GROUP BY table_name ORDER BY table_name`)
-      .then(setCols).catch(() => setCols(null));
+    let live = true;
+    (async () => {
+      const names = (await runQuery(problem.schema, "visible",
+        `SELECT table_name FROM information_schema.tables
+         WHERE table_schema = 'public' ORDER BY table_name`)).rows.map((r) => String(r[0]));
+      const previews = await Promise.all(names.map(async (name) => ({
+        name, sample: await runQuery(problem.schema, "visible", `SELECT * FROM ${name} LIMIT 3`),
+      })));
+      if (live) setTables(previews);
+    })().catch(() => setTables([]));
+    return () => { live = false; };
   }, [problem.schema]);
 
-  const peek = async (table: string) => {
-    if (openTable === table) { setOpenTable(null); setSample(null); return; }
-    setOpenTable(table);
-    setSample(await runQuery(problem.schema, "visible",
-      `SELECT * FROM ${table} LIMIT 5`));
-  };
-
-  if (!cols) return null;
+  if (!tables) return null;
   return (
     <div className="schema-mini">
-      <h3>Schema: {problem.schema} <span className="peek-hint">— click a table for sample rows</span></h3>
-      <table><tbody>
-        {cols.rows.map((r, i) => (
-          <React.Fragment key={i}>
-            <tr className="peekable" onClick={() => peek(String(r[0]))}>
-              <td className="tname">{openTable === String(r[0]) ? "▾ " : "▸ "}{String(r[0])}</td>
-              <td>{String(r[1])}</td>
-            </tr>
-            {openTable === String(r[0]) && sample && (
-              <tr><td colSpan={2} className="sample-cell"><ResultTable result={sample} /></td></tr>
-            )}
-          </React.Fragment>
-        ))}
-      </tbody></table>
+      <h3>Tables — the data you're querying</h3>
+      {tables.map((t) => (
+        <div className="tbl-card" key={t.name}>
+          <div className="tbl-name">{t.name}</div>
+          <ResultTable result={t.sample} />
+        </div>
+      ))}
     </div>
   );
 }
 
-/** "What am I aiming for?" — the canonical solution's output on the visible
- *  data. Safe to show: copying these literal rows still fails the hidden
- *  dataset at grading time. */
+/** "What am I aiming for?" — the canonical solution's output, shown ALWAYS
+ *  so the learner writes toward a visible target. Safe: copying these literal
+ *  rows still fails the hidden dataset at grading time. */
 function ExpectedOutput({ problem }: { problem: Problem }) {
   const [expected, setExpected] = useState<QueryResult | null>(null);
-  const [shown, setShown] = useState(false);
-  const reveal = async () => {
-    setShown(true);
-    const { execute } = await import("../grader/grader");
-    const result = await execute(problem, "visible", problem.solution);
-    setExpected({ ...result, rows: result.rows.slice(0, 10) });
-  };
-  if (!shown) {
-    return <button className="btn ghost" onClick={reveal}>
-      {problem.kind === "dml" ? "Show expected state after your change" : "Show expected output"}
-    </button>;
-  }
-  if (!expected) return <p className="loading">…</p>;
+  useEffect(() => {
+    let live = true;
+    (async () => {
+      const { execute } = await import("../grader/grader");
+      const result = await execute(problem, "visible", problem.solution);
+      if (live) setExpected({ ...result, rows: result.rows.slice(0, 10) });
+    })().catch(() => setExpected(null));
+    return () => { live = false; };
+  }, [problem]);
   return (
     <div className="expected">
-      <h3>Expected {problem.kind === "dml" ? "state (check query)" : "output"} on the visible data
-        {expected.rows.length === 10 ? " · first 10 rows" : ""}</h3>
-      <ResultTable result={expected} />
+      <h3>🎯 Target result{problem.kind === "dml" ? " (state after your change)" : ""}
+        {expected && expected.rows.length === 10 ? " · first 10 rows" : ""}</h3>
+      {expected ? <ResultTable result={expected} /> : <p className="loading">loading target…</p>}
     </div>
   );
 }
@@ -290,7 +280,7 @@ function Workspace({
             {showSolution && <pre>{problem.solution}</pre>}
           </div>
         )}
-        {!hideHelp && <div className="reveal"><ExpectedOutput key={problem.id} problem={problem} /></div>}
+        {!hideHelp && <ExpectedOutput key={problem.id} problem={problem} />}
         <SchemaMini problem={problem} />
       </div>
       <div>
