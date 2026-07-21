@@ -6,27 +6,28 @@ export const ctes: Module = {
   id: "ctes",
   title: "Common Table Expressions (CTEs)", track: "interview",
   blurb: "WITH lets you name intermediate results and build complex answers step by step — like showing your work in math.",
-  theory: `## A CTE is a named step
-\`WITH\` lets you compute something, name it, and reuse it — like defining a variable mid-query. Instead of one giant nested query, you build up in readable steps.
+  theory: `## Scratch paper for a query
+Ever solve a hard math problem by writing intermediate results on scratch paper, then combining them? A CTE (\`WITH\`) is that scratch paper. You compute a piece, give it a name, and use it below — instead of cramming everything into one nested query.
 
-Each customer's total spend. Step 1: total each order. Step 2: total each customer.
+## Build it in named steps
+"Each customer's total spend." Two steps: first total each order, then total each customer.
 
 \`\`\`sql
-WITH order_totals AS (            -- step 1: one row per order
+WITH order_totals AS (            -- step 1: name this result "order_totals"
   SELECT order_id, SUM(quantity * unit_price) AS order_value
   FROM order_items
   GROUP BY order_id
 )
-SELECT o.customer_id, SUM(t.order_value) AS spend   -- step 2: roll up
+SELECT o.customer_id, SUM(t.order_value) AS spend   -- step 2: use it
 FROM orders o
 JOIN order_totals t ON t.order_id = o.order_id
 GROUP BY o.customer_id;
 \`\`\`
 
-\`order_totals\` acts like a temporary table that exists only for this query. The final SELECT reads from it as if it were real.
+\`order_totals\` behaves like a temporary table that exists only for this query. The final SELECT reads from it as if it were real.
 
-## Why interviewers love CTEs
-Chained CTEs read top-to-bottom like a story. In a live interview you *narrate* each step as you type — "first I total each order, then I sum per customer." That narration is often what's actually graded, more than the final query.
+## Why interviewers love them
+Chained CTEs read top-to-bottom like a story. In a live interview you **narrate each step as you type** — "first I total each order, then I sum per customer." That narration shows structured thinking, which is often what's actually being graded.
 
 ## Chain as many as you need
 \`\`\`sql
@@ -35,7 +36,7 @@ WITH a AS (...),
      c AS (SELECT ... FROM b ...)    -- c can use b
 SELECT * FROM c;
 \`\`\`
-Each step can use every step above it. Build complexity one debuggable layer at a time.`,
+Each step can use every step above it. Complex answers become a stack of small, debuggable layers.`,
   problems: [
     {
       id: "c1", title: "Average order value", difficulty: 2, schema: "brightmart",

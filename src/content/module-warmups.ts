@@ -6,21 +6,47 @@ export const warmups: Module = {
   id: "warmups",
   title: "First steps: reading data", track: "core",
   blurb: "Your first queries: SELECT, WHERE, ORDER BY, LIMIT — one new idea at a time.",
-  theory: `## Reading a table with SELECT
-A table is rows and columns, like a spreadsheet. \`SELECT\` chooses columns; \`FROM\` names the table:
+  theory: `## A table is a spreadsheet
+A database table is rows and columns, exactly like a spreadsheet tab. Reading it is four simple moves — pick columns, filter rows, sort, cut.
+
+\`\`\`
+users                       <- the "tracks" / "users" tables work the same way
+user_id | username | country
+1       | ana      | US
+2       | boris    | DE
+3       | carmen   | US
+\`\`\`
+
+## SELECT — pick which columns
+\`SELECT\` chooses columns; \`FROM\` names the table.
+
 \`\`\`sql
 SELECT username, country FROM users;
 \`\`\`
-\`SELECT *\` means "all columns" — fine for exploring, avoided in final answers.
+\`SELECT *\` means "every column" — handy for a quick look, but name your columns in real answers.
 
-## Filtering rows with WHERE
-\`WHERE\` keeps only rows that match a condition: \`=\`, \`<>\`, \`<\`, \`>\`, \`AND\`, \`OR\`, \`IN (…)\`, \`BETWEEN\`, and \`LIKE\` for text patterns (\`%\` = anything).
+## WHERE — keep only some rows
+\`WHERE\` throws away rows that don't match. Text goes in single quotes; numbers don't.
 
-## Sorting and limiting
-\`ORDER BY col\` sorts ascending; add \`DESC\` for descending. \`LIMIT n\` keeps the first n rows *after* sorting — together they answer every "top…" question.
+\`\`\`sql
+SELECT username FROM users WHERE country = 'US';   -- ana, carmen
+\`\`\`
+Combine with \`AND\` / \`OR\`. \`IN ('US','DE')\` is a tidy way to say "any of these." \`LIKE 'a%'\` matches text patterns (\`%\` = anything).
 
-## Counting
-\`COUNT(*)\` counts rows. Add \`WHERE\` first to count a subset. That's your first aggregate — the deep end of aggregation comes in the next module.`,
+## ORDER BY and LIMIT — sort, then take the top
+\`ORDER BY\` sorts (add \`DESC\` for high-to-low). \`LIMIT n\` keeps the first n rows **after** sorting — together they answer every "top 5…" question.
+
+\`\`\`sql
+SELECT title FROM tracks ORDER BY duration_s DESC LIMIT 5;   -- 5 longest
+\`\`\`
+
+## COUNT — how many?
+\`COUNT(*)\` counts rows. Add a \`WHERE\` first to count just a subset.
+
+\`\`\`sql
+SELECT COUNT(*) FROM tracks WHERE genre = 'jazz';
+\`\`\`
+That's your first taste of aggregation — the next module goes deeper.`,
   problems: [
     {
       id: "wu1", title: "List every track's title and artist", difficulty: 1, schema: "wavely",

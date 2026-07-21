@@ -6,19 +6,36 @@ export const mutations: Module = {
   id: "mutations",
   title: "Modifying data", track: "advanced",
   blurb: "INSERT, UPDATE, DELETE — and how professionals avoid destroying production data while doing it.",
-  theory: `## Reading is half the job
-Analyst interviews are SELECT-heavy, but analytics-engineer and senior screens probe whether you can *change* data safely.
+  theory: `## Now you're editing the spreadsheet
+Until now you've only *read* data. This module *changes* it — add rows, edit rows, delete rows. Analyst interviews lean on SELECT, but analytics-engineer and senior screens check you can change data **safely**.
 
-## The safety ritual
-Before any UPDATE or DELETE in real life: run the same statement as a SELECT first, check the row count, then mutate. In interviews, *say* this ritual out loud — it's a seniority signal.
+## The three verbs
+\`\`\`sql
+INSERT INTO products (product_id, product_name, price)  -- add a row
+VALUES (999, 'Gift Card', 25.00);
 
-## UPSERT
-Postgres: \`INSERT … ON CONFLICT (key) DO UPDATE SET col = EXCLUDED.col\`. EXCLUDED is the row that failed to insert.
+UPDATE products SET price = price * 1.10                 -- change rows
+WHERE category = 'Cables';
 
-## Transactions
-\`BEGIN … COMMIT\` makes several statements atomic — all or nothing. Anything that moves value between rows (transfers, rebalancing) belongs in one.
+DELETE FROM order_items                                  -- remove rows
+WHERE order_id IN (SELECT order_id FROM orders WHERE status = 'cancelled');
+\`\`\`
+Notice: \`UPDATE\` and \`DELETE\` **without a WHERE hit every row.** That's how people wipe a table by accident.
 
-**How grading works here:** your statements run against a fresh copy of the database; a verification query then checks the resulting state — on the visible copy and a hidden one.`,
+## The safety ritual (say it out loud in interviews)
+Before any UPDATE or DELETE in real life: run it as a \`SELECT\` first with the same WHERE, check the row count looks right, *then* change the verb. Saying this ritual signals seniority.
+
+## UPSERT — insert, or update if it already exists
+\`\`\`sql
+INSERT INTO products (product_id, price) VALUES (1, 49.99)
+ON CONFLICT (product_id) DO UPDATE SET price = EXCLUDED.price;
+\`\`\`
+\`EXCLUDED\` is the row you tried to insert. Read it as "add this; if it clashes on the key, update instead."
+
+## Transactions — all or nothing
+\`BEGIN … COMMIT\` groups statements so they all succeed or all roll back. Anything that moves value between rows (a transfer, a rebalance) belongs in one — you never want half of it to land.
+
+**How grading works here:** your statements run against a fresh copy of the database, then a check query inspects the result — on the visible copy and a hidden one.`,
   problems: [
     {
       id: "m1", title: "Add a new product", difficulty: 1, schema: "brightmart", kind: "dml",
@@ -208,19 +225,39 @@ export const expressions: Module = {
   id: "expressions",
   title: "Text, dates & CASE", track: "core",
   blurb: "Format text, do date math, and write IF-style logic (CASE) — fast and correctly, under time pressure.",
-  theory: `## Strings you actually use
-\`LOWER/UPPER/INITCAP\`, \`LENGTH\`, \`SUBSTRING\`, \`SPLIT_PART\`, \`POSITION\`, \`||\` for concat, \`TRIM\`. Postgres bonus: \`STRING_AGG(col, ', ' ORDER BY …)\` collapses a group into readable text.
+  theory: `## Formulas, but in SQL
+In a spreadsheet you write formulas on cells — uppercase a name, subtract two dates, an \`IF()\` that returns one thing or another. SQL has all three. This module is fluency: doing them fast and correctly under time pressure.
 
-## Dates without fear
-- \`EXTRACT(YEAR|MONTH|DOW FROM d)\` — DOW: 0 = Sunday.
-- \`date_trunc('month', d)\` buckets; \`::date\` tidies.
-- \`AGE(a, b)\` gives an interval; date minus date gives integer days.
-- \`TO_CHAR(d, 'YYYY-MM')\` formats for humans (and loses type — format last).
+## Text
+Glue with \`||\`, change case with \`UPPER\` / \`LOWER\`, cut with \`SUBSTRING\`, and collapse a whole group into one string with \`STRING_AGG\`.
 
-## CASE and the division traps
-\`CASE WHEN … THEN … ELSE … END\` is SQL's if-expression. Two classics:
-- **Integer division**: \`1/2 = 0\`. Multiply by \`1.0\` or cast \`::numeric\` first.
-- **Division by zero**: \`x / NULLIF(y, 0)\` returns NULL instead of crashing — then COALESCE if you want a default.`,
+\`\`\`sql
+SELECT UPPER(name) || ' - ' || dept AS label FROM employees;
+-- "ANA - Engineering"
+\`\`\`
+
+## Dates
+Pull a part out with \`EXTRACT\`, bucket to the month with \`date_trunc\`, or subtract two dates to get days:
+
+\`\`\`sql
+EXTRACT(DOW FROM order_date)         -- day of week: 0 = Sunday
+date_trunc('month', order_date)      -- snaps to the 1st of the month
+delivered_on - ordered_on            -- whole number of days
+\`\`\`
+
+## CASE — SQL's IF
+\`CASE\` returns different values per row, like a nested \`IF()\`:
+
+\`\`\`sql
+SELECT CASE WHEN hired_on < '2022-01-01' THEN 'veteran'
+            WHEN hired_on < '2024-01-01' THEN 'established'
+            ELSE 'recent' END AS tenure
+FROM employees;
+\`\`\`
+
+## Two number traps that fail interviews
+- **Integer division**: \`1 / 2\` is \`0\` in SQL, not \`0.5\`. Multiply by \`1.0\` or cast \`::numeric\` first: \`refunds::numeric / orders\`.
+- **Divide by zero** crashes. Guard the denominator with \`NULLIF\`: \`x / NULLIF(y, 0)\` returns NULL instead of erroring — then \`COALESCE\` if you want a default.`,
   problems: [
     {
       id: "x1", title: "Employee badges (name and department)", difficulty: 1, schema: "orbit",

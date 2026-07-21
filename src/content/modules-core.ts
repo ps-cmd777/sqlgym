@@ -6,36 +6,54 @@ export const foundations: Module = {
   id: "foundations",
   title: "Aggregation & filtering", track: "core",
   blurb: "WHERE, COUNT, GROUP BY — plus the empty-value (NULL) surprises that trip everyone up.",
-  theory: `## How a query actually runs
-SQL reads like English but executes in a fixed order — and knowing that order explains most beginner confusion:
+  theory: `## From listing rows to summarizing them
+So far you've *listed* rows. Now you'll *summarize* — total, count, average. Think of the pivot-table feature in a spreadsheet: it turns many rows into a few summary rows.
 
-- \`FROM\` — take the table
-- \`WHERE\` — throw away rows you don't want
-- \`GROUP BY\` — collapse the survivors into groups
-- \`HAVING\` — throw away whole groups
-- \`SELECT\` — choose the output columns
-- \`ORDER BY\` / \`LIMIT\` — sort, then cut
+## GROUP BY = one summary row per category
+"How many users per country?" Group the rows by country, then count each group:
 
-So: WHERE filters *rows, before grouping*; HAVING filters *groups, after*. "Countries with at least 5 users" is a HAVING question — you can't know a country's count until after grouping:
+\`\`\`
+users                          result
+country          ->            country | n
+US                             US      | 2
+DE                             DE      | 1
+US
+\`\`\`
 
 \`\`\`sql
-SELECT country, COUNT(*) AS users
+SELECT country, COUNT(*) AS n
+FROM users
+GROUP BY country;
+\`\`\`
+\`SUM\`, \`AVG\`, \`MIN\`, \`MAX\` work the same way — one number per group.
+
+## WHERE vs HAVING — filter rows, or filter groups?
+This trips everyone. A query runs in a fixed order:
+
+1. \`WHERE\` throws away **rows** — before grouping.
+2. \`GROUP BY\` collapses what's left into groups.
+3. \`HAVING\` throws away whole **groups** — after counting.
+
+So "countries with at least 5 users" is a \`HAVING\` question — you can't know a country's count until after the grouping happens:
+
+\`\`\`sql
+SELECT country, COUNT(*) AS n
 FROM users
 GROUP BY country
 HAVING COUNT(*) >= 5;
 \`\`\`
 
-## NULL: the empty cell that breaks intuition
-NULL means "no value here" — a customer with no referrer, a subscription never cancelled. It is not zero and not empty text, and it has strange manners:
+## NULL = a blank cell
+\`NULL\` means "no value here" — a blank cell. It is not zero, not empty text, and it behaves oddly:
 
-- \`WHERE status != 'cancelled'\` does NOT return rows where status is NULL. SQL can't confirm that "unknown" is different from 'cancelled', and unconfirmed rows get dropped. If NULLs should count as different, say so explicitly: \`status IS DISTINCT FROM 'cancelled'\`.
-- \`COUNT(*)\` counts rows. \`COUNT(referred_by)\` counts only rows where that column HAS a value. Two different questions — interviewers love asking which is which.
-- Averages skip NULLs: \`AVG(score)\` divides by the number of non-empty scores, not by all rows.
+- \`WHERE status != 'cancelled'\` **drops** rows where status is NULL. SQL can't confirm blank ≠ 'cancelled', so it excludes them. Want blanks kept? Say \`status IS DISTINCT FROM 'cancelled'\`.
+- \`COUNT(*)\` counts rows; \`COUNT(referred_by)\` counts only rows where that cell is filled in. Two different questions.
+- \`AVG(score)\` ignores blanks — it divides by the filled-in count, not all rows.
 
-If a result ever has mysteriously few rows, your first suspect is a NULL meeting a \`!=\` or a \`NOT IN\`.
+Rule of thumb: if a result has mysteriously few rows, suspect a NULL meeting \`!=\` or \`NOT IN\`.
 
-## GROUP BY's one strict rule
-Every column in SELECT must either be inside an aggregate (COUNT, SUM, AVG, MIN, MAX) or listed in GROUP BY. The database enforces this because, for a collapsed group, it wouldn't know WHICH row's value to display.`,
+## The GROUP BY rule
+Every column you SELECT must be either inside an aggregate (\`COUNT\`/\`SUM\`/…) or listed in \`GROUP BY\`. Otherwise the database won't know which row's value to show for the group.`,
   problems: [
     {
       id: "f1", title: "German users by signup date", difficulty: 1, schema: "wavely",
