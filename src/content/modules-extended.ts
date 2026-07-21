@@ -79,39 +79,54 @@ export const hierarchy: Module = {
   id: "hierarchy",
   title: "Recursive queries", track: "advanced",
   blurb: "Who reports to whom, up and down any number of levels — the advanced topic that separates senior candidates.",
-  theory: `## Tree data lives in one self-referencing table
-An org chart is \`employees(emp_id, manager_id)\` — each row points to its boss. The CEO's \`manager_id\` is NULL.
+  theory: `## Start with a family tree
+An org chart is just a family tree: everyone has one parent (their boss), except the person at the very top. In SQL that's one table pointing at itself:
 
 \`\`\`
 emp_id | name   | manager_id
-1      | Ana    | NULL        (CEO)
-2      | Boris  | 1           (reports to Ana)
-3      | Carmen | 2           (reports to Boris)
-4      | Dev    | 2
+1      | Ana    | NULL     <- the boss, no manager
+2      | Boris  | 1        <- Boris's manager is Ana
+3      | Carmen | 2        <- Carmen's manager is Boris
+4      | Dev    | 2        <- Dev's manager is Boris too
 \`\`\`
 
-One level down (Ana's direct reports) is a plain self-join. But "everyone under Ana, all the way down" needs **recursion** — you don't know how deep the tree goes.
+\`manager_id\` points to another row's \`emp_id\`. Ana is the top, so hers is NULL.
 
-## WITH RECURSIVE, step by step
+## The easy question, and the hard one
+Easy: "Who reports directly to Ana?" — one hop. A plain self-join finds Boris.
+
+Hard: "Give me **everyone** under Ana — her reports, their reports, all the way down." You can't write a fixed number of joins, because you don't know how deep it goes. This is what recursion is for.
+
+## Recursion = keep asking the same question
+The plain-English recipe:
+
+1. Start with Ana's direct reports. (found: Boris)
+2. Now ask: who reports to the people I just found? (Boris's reports: Carmen, Dev)
+3. Ask again about *those* people. (Carmen and Dev have no reports)
+4. Nobody new — stop.
+
+That "start, then repeat until nothing new" is exactly \`WITH RECURSIVE\`:
+
 \`\`\`sql
 WITH RECURSIVE chain AS (
-  SELECT emp_id, name, 1 AS depth          -- ANCHOR: where to start
-  FROM employees WHERE manager_id = 1
+  -- STEP 1 (the "anchor"): where we begin
+  SELECT emp_id, name FROM employees WHERE manager_id = 1
+
   UNION ALL
-  SELECT e.emp_id, e.name, chain.depth + 1 -- STEP: children of rows so far
+
+  -- STEP 2 (repeats): children of everyone found so far
+  SELECT e.emp_id, e.name
   FROM employees e
   JOIN chain ON e.manager_id = chain.emp_id
 )
 SELECT * FROM chain;
 \`\`\`
 
-How it runs: the **anchor** runs once (Ana's direct reports). Then the **step** repeats — each round finds the children of the rows the previous round added — until a round finds nobody.
+The top half runs once (Ana's reports). The bottom half runs again and again — each round finds the children of the previous round's rows — until a round finds nobody. Then it stops. That's the whole trick.
 
-Trace: round 1 finds Boris. Round 2 finds Boris's reports (Carmen, Dev). Round 3 finds theirs (none) -> stop.
-
-## Two habits that save you
-- **Carry \`depth\`** even when unasked — answers the "how many levels?" follow-up and catches a runaway query.
-- **Path strings**: \`parent_path || ' > ' || name\` builds "Ana > Boris > Carmen" — reads beautifully, demos understanding.`,
+## Two habits that make you look senior
+- **Add a \`depth\` counter** (\`chain.depth + 1\` each round). It answers the inevitable "how many levels deep?" and stops a runaway query if the data has a loop.
+- **Build a path string** (\`chain.path || ' > ' || e.name\`) to get \`"Ana > Boris > Carmen"\` — instantly readable, and it shows you understand what's happening.`,
   problems: [
     {
       id: "h1", title: "Direct reports per manager", difficulty: 2, schema: "orbit",

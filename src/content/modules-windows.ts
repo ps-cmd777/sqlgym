@@ -104,13 +104,44 @@ export const windows1: Module = {
   id: "windows1",
   title: "Window functions: ranking", track: "interview",
   blurb: "\"Top 3 products per category\", \"each user's latest order\" — the two most-asked interview questions, one technique.",
-  theory: `## Window functions vs GROUP BY
-\`GROUP BY\` **collapses** many rows into one. A window function computes across related rows but **keeps every row**. You get an aggregate *and* the detail, side by side.
+  theory: `## Start with a spreadsheet
+You know pivot tables in Excel. A pivot **squashes** 100 rows into a few summary rows — the individual rows vanish.
 
-Syntax: \`fn() OVER (PARTITION BY … ORDER BY …)\`. PARTITION BY = which group; ORDER BY = order within it.
+A window function is the opposite. It's like typing a formula in a **new column** that peeks at other rows — while every original row stays exactly where it is. You keep the detail AND get the summary.
 
-## The ranking trio — see the difference
-Ranking scores 100, 90, 90, 80:
+## The question it answers
+"Show each employee with their salary rank *inside their own department*." You want the rank, but you don't want to lose the people.
+
+Start with what you already know — just the rows:
+
+\`\`\`
+name   | dept  | salary
+Ana    | Eng   | 120
+Boris  | Eng   | 100
+Carmen | Sales | 90
+\`\`\`
+
+Now add a rank that **restarts for each department**:
+
+\`\`\`
+name   | dept  | salary | dept_rank
+Ana    | Eng   | 120    | 1
+Boris  | Eng   | 100    | 2
+Carmen | Sales | 90     | 1      <- back to 1, new department
+\`\`\`
+
+The SQL:
+
+\`\`\`sql
+SELECT name, dept, salary,
+       RANK() OVER (PARTITION BY dept ORDER BY salary DESC) AS dept_rank
+FROM employees;
+\`\`\`
+
+Read \`OVER (PARTITION BY dept ORDER BY salary DESC)\` in plain words: **"rank them — but start over for each dept, ordered by salary, highest first."** That's the whole idea. \`PARTITION BY\` = which group. \`ORDER BY\` = in what order.
+
+## Three ways to rank (and why it matters)
+Same data, three functions. Watch the tie (two 90s):
 
 \`\`\`
 score | ROW_NUMBER | RANK | DENSE_RANK
@@ -120,29 +151,22 @@ score | ROW_NUMBER | RANK | DENSE_RANK
 80    |     4      |  4   |     3
 \`\`\`
 
-- \`ROW_NUMBER()\` — always 1,2,3,4. Ties broken arbitrarily, so **add a tiebreaker** or results wobble.
-- \`RANK()\` — ties share a rank, then **skips** (…2,2,4).
-- \`DENSE_RANK()\` — ties share a rank, **no skip** (…2,2,3).
+- \`ROW_NUMBER()\` — 1,2,3,4 no matter what. Ties broken randomly, so **always add a tiebreaker**.
+- \`RANK()\` — ties tie, then it **skips** a number (…2,2,**4**).
+- \`DENSE_RANK()\` — ties tie, **no skip** (…2,2,**3**).
 
-"What happens on a tie?" is the #1 window-function interview probe. Pick the right one before you type.
+"What happens on a tie?" is the single most common window-function interview question. Now you can answer it.
 
-## Top-N per group (drill until automatic)
-"Top 2 products per category": rank *within* each category, keep ranks ≤ 2.
+## The one gotcha
+You **can't** put a window function in \`WHERE\` (WHERE runs first, before the ranking exists). To keep only "rank 1", wrap the query and filter outside:
 
 \`\`\`sql
-SELECT category, product_name, units FROM (
-  SELECT category, product_name,
-         ROW_NUMBER() OVER (PARTITION BY category ORDER BY units DESC, product_id) AS rn
-  FROM product_sales
+SELECT * FROM (
+  SELECT name, dept, RANK() OVER (PARTITION BY dept ORDER BY salary DESC) AS r
+  FROM employees
 ) ranked
-WHERE rn <= 2;
-\`\`\`
-
-## Latest record per entity (the other must-know)
-Same shape, keep \`rn = 1\`: PARTITION BY the entity, ORDER BY date DESC, keep the top row = each entity's most recent row.
-
-## The rule that trips beginners
-A window function **cannot go in WHERE** — WHERE runs before the window is computed. Wrap it in a subquery or CTE, then filter on the result.`,
+WHERE r = 1;
+\`\`\``,
   problems: [
     {
       id: "w1", title: "Rank tracks by length", difficulty: 2, schema: "wavely",

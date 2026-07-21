@@ -218,3 +218,5 @@ h1 { font-size: 21px; font-weight: 700; letter-spacing: -0.3px; margin-bottom: 4
 .expected h3 { font-size: 12px; letter-spacing: 0.5px; text-transform: uppercase;
   color: var(--accent-ink); margin-bottom: 6px; }
 .expected .rtable { max-height: 260px; border-color: color-mix(in srgb, var(--accent) 35%, var(--grid)); }
+.theory ol { margin: 8px 0 8px 20px; color: var(--ink-2); }
+.theory ol li { margin: 4px 0; }
