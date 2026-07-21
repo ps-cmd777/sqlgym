@@ -4,7 +4,7 @@ import type { Module } from "./types";
 
 export const foundations: Module = {
   id: "foundations",
-  title: "Filtering, counting & grouping",
+  title: "Aggregation & filtering", track: "core",
   blurb: "WHERE, COUNT, GROUP BY — plus the empty-value (NULL) surprises that trip everyone up.",
   theory: `## How a query actually runs
 SQL reads like English but executes in a fixed order — and knowing that order explains most beginner confusion:
@@ -82,7 +82,7 @@ Every column in SELECT must either be inside an aggregate (COUNT, SUM, AVG, MIN,
 
 export const joins: Module = {
   id: "joins",
-  title: "Combining tables (JOINs)",
+  title: "Joins", track: "core",
   blurb: "Your data lives in separate tables. JOIN is how you glue them together — and here's how it silently goes wrong.",
   theory: `## Why joins exist
 Real databases split information across tables so nothing is stored twice. Customers live in one table, their orders in another:
@@ -181,7 +181,7 @@ WHERE o.status = 'completed'`,
 
 export const subqueries: Module = {
   id: "subqueries",
-  title: "Queries inside queries",
+  title: "Subqueries & set operations", track: "core",
   blurb: "Use one query's answer inside another: compare to averages, check \"does this exist?\", combine result lists.",
   theory: `## The idea: a query's answer, used inside another query
 Sometimes the filter you need isn't a fixed number — it's itself the answer to a question. "Which products cost more than **the average price**?" You can't type the average; it has to be computed. So you put a small query inside the big one:

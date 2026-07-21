@@ -1,8 +1,9 @@
 import CodeMirror from "@uiw/react-codemirror";
 import { sql as sqlLang, PostgreSQL } from "@codemirror/lang-sql";
 import React, { useCallback, useEffect, useMemo, useState } from "react";
-import { interviewDraw, MODULES, moduleOf, problemById } from "../content";
-import type { Problem } from "../content/types";
+import { ALL_TOPICS, interviewDraw, MODULES, moduleOf, problemById } from "../content";
+import type { Problem, Track } from "../content/types";
+import { TRACK_LABELS } from "../content/types";
 import { runQuery, warm, type QueryResult } from "../engine/engine";
 import { gradeProblem, type GradeOutcome } from "../grader/grader";
 import {
@@ -108,22 +109,33 @@ function Home({ progress }: { progress: Progress }) {
           <div className="stat"><b>{streak}{streak > 0 ? " 🔥" : ""}</b><span>day streak</span></div>
         </div>
       </section>
-      <div className="mods">
-        {MODULES.map((m, i) => {
-          const done = m.problems.filter((p) => progress[p.id] === "solved").length;
-          return (
-            <div className="mod-card" key={m.id} onClick={() => (location.hash = `#/m/${m.id}`)}>
-              <span className="n">{String(i + 1).padStart(2, "0")}</span>
-              <h2>{m.title}</h2>
-              <p>{m.blurb}</p>
-              <div className="progress-bar">
-                <i style={{ width: `${(done / m.problems.length) * 100}%` }} />
-              </div>
-              <div className="pct">{done}/{m.problems.length} solved</div>
+      {(["core", "interview", "advanced"] as Track[]).map((track) => {
+        const mods = MODULES.filter((m) => (m.track ?? "core") === track);
+        if (!mods.length) return null;
+        const tSolved = mods.reduce((n, m) => n + m.problems.filter((p) => progress[p.id] === "solved").length, 0);
+        const tTotal = mods.reduce((n, m) => n + m.problems.length, 0);
+        return (
+          <section key={track} className="track">
+            <h2 className="track-h">{TRACK_LABELS[track]}
+              <span className="track-count">{tSolved}/{tTotal} solved · {mods.length} modules</span></h2>
+            <div className="mods">
+              {mods.map((m) => {
+                const done = m.problems.filter((p) => progress[p.id] === "solved").length;
+                return (
+                  <div className="mod-card" key={m.id} onClick={() => (location.hash = `#/m/${m.id}`)}>
+                    <h2>{m.title}</h2>
+                    <p>{m.blurb}</p>
+                    <div className="progress-bar">
+                      <i style={{ width: `${(done / m.problems.length) * 100}%` }} />
+                    </div>
+                    <div className="pct">{done}/{m.problems.length} solved</div>
+                  </div>
+                );
+              })}
             </div>
-          );
-        })}
-      </div>
+          </section>
+        );
+      })}
     </>
   );
 }
@@ -334,6 +346,10 @@ function ProblemView({
         <a href={`#/m/${mod.id}`}>(review the theory)</a>
         {next && <> · <a href={`#/p/${next.id}`}>next problem →</a></>}
       </p>
+      <div className="tag-row">
+        {problem.company && <span className="pill-co">{problem.company}</span>}
+        {(problem.topics ?? []).map((tp) => <span key={tp} className="pill-topic">{tp}</span>)}
+      </div>
       <Workspace
         problem={problem}
         draftKey={`draft-${id}`}
@@ -347,10 +363,12 @@ function BankView({ progress }: { progress: Progress }) {
   const [moduleFilter, setModuleFilter] = useState("all");
   const [difficulty, setDifficulty] = useState(0);
   const [status, setStatus] = useState("all");
+  const [topic, setTopic] = useState("all");
   const rows = MODULES.flatMap((m) => m.problems.map((p) => ({ p, m })));
   const filtered = rows.filter(({ p, m }) =>
     (moduleFilter === "all" || m.id === moduleFilter) &&
     (difficulty === 0 || p.difficulty === difficulty) &&
+    (topic === "all" || (p.topics ?? []).includes(topic)) &&
     (status === "all" ||
       (status === "solved" ? progress[p.id] === "solved" : progress[p.id] !== "solved")),
   );
@@ -369,6 +387,10 @@ function BankView({ progress }: { progress: Progress }) {
           <option value={1}>intro</option><option value={2}>easy</option>
           <option value={3}>medium</option><option value={4}>hard</option>
         </select>
+        <select value={topic} onChange={(e) => setTopic(e.target.value)}>
+          <option value="all">Any topic</option>
+          {ALL_TOPICS.map((tp) => <option key={tp} value={tp}>{tp}</option>)}
+        </select>
         <select value={status} onChange={(e) => setStatus(e.target.value)}>
           <option value="all">Solved + unsolved</option>
           <option value="unsolved">Unsolved only</option>
@@ -380,6 +402,7 @@ function BankView({ progress }: { progress: Progress }) {
           <div className="prow" key={p.id} onClick={() => (location.hash = `#/p/${p.id}`)}>
             <span className="solved-mark">{progress[p.id] === "solved" ? "✓" : ""}</span>
             <span className="t">{p.title}</span>
+            {p.company && <span className="pill-co">{p.company}</span>}
             <span className="pill-mod">{m.title}</span>
             <DiffBadge d={p.difficulty} />
           </div>

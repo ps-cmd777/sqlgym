@@ -4,7 +4,7 @@ import type { Module } from "./types";
 
 export const mutations: Module = {
   id: "mutations",
-  title: "Changing data safely",
+  title: "Modifying data", track: "advanced",
   blurb: "INSERT, UPDATE, DELETE — and how professionals avoid destroying production data while doing it.",
   theory: `## Reading is half the job
 Analyst interviews are SELECT-heavy, but analytics-engineer and senior screens probe whether you can *change* data safely.
@@ -77,7 +77,7 @@ DELETE FROM orders WHERE status = 'cancelled';`,
 
 export const hierarchy: Module = {
   id: "hierarchy",
-  title: "Org charts & tree data (recursion)",
+  title: "Recursive queries", track: "advanced",
   blurb: "Who reports to whom, up and down any number of levels — the advanced topic that separates senior candidates.",
   theory: `## The shape of a tree in SQL
 One table, one self-reference: \`employees(emp_id, manager_id)\`. The CEO's manager_id is NULL. One level down is a self-join; *any* depth needs recursion.
@@ -178,7 +178,7 @@ SELECT MAX(level) AS max_depth FROM org`,
 
 export const expressions: Module = {
   id: "expressions",
-  title: "Text, dates & IF-logic",
+  title: "Text, dates & CASE", track: "core",
   blurb: "Format text, do date math, and write IF-style logic (CASE) — fast and correctly, under time pressure.",
   theory: `## Strings you actually use
 \`LOWER/UPPER/INITCAP\`, \`LENGTH\`, \`SUBSTRING\`, \`SPLIT_PART\`, \`POSITION\`, \`||\` for concat, \`TRIM\`. Postgres bonus: \`STRING_AGG(col, ', ' ORDER BY …)\` collapses a group into readable text.

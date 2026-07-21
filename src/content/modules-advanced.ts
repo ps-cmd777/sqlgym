@@ -4,7 +4,7 @@ import type { Module } from "./types";
 
 export const patterns: Module = {
   id: "patterns",
-  title: "Famous interview patterns",
+  title: "Advanced patterns", track: "interview",
   blurb: "Streaks, duplicates, pivot tables, missing dates — problems so common in interviews they have names.",
   theory: `## Dedup (keep one row per entity)
 \`ROW_NUMBER() OVER (PARTITION BY key ORDER BY tiebreaker)\` then keep \`rn = 1\`. State your tiebreaker out loud.
@@ -115,7 +115,7 @@ SELECT genre, artist, plays FROM (
 
 export const analytics: Module = {
   id: "analytics",
-  title: "Business metrics: retention & funnels",
+  title: "Product analytics", track: "interview",
   blurb: "The questions companies actually ask: do users come back? where do they drop off? who are the best customers?",
   theory: `## Retention, defined precisely
 "Week-1 retention of the March signup cohort" = of users who signed up in March, what share did the thing again 7–13 days after signup? Interview answers live or die on the precision of the window definition — state yours before writing SQL.
@@ -210,7 +210,7 @@ ORDER BY CASE segment WHEN 'power' THEN 1 WHEN 'regular' THEN 2 ELSE 3 END`,
 
 export const interviewSet: Module = {
   id: "interview",
-  title: "The interview gauntlet",
+  title: "Interview gauntlet", track: "interview",
   blurb: "Mixed hard problems with no hand-holding — exactly what a live interview feels like. Use timed mode here.",
   theory: `## How to run a live SQL screen
 1. **Restate the question** with your assumptions: statuses included? ties? empty groups? That clarification round is scored.

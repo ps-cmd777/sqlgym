@@ -4,7 +4,7 @@ import type { Module } from "./types";
 
 export const warmups: Module = {
   id: "warmups",
-  title: "First steps: reading data",
+  title: "First steps: reading data", track: "core",
   blurb: "Your first queries: SELECT, WHERE, ORDER BY, LIMIT — one new idea at a time.",
   theory: `## Reading a table with SELECT
 A table is rows and columns, like a spreadsheet. \`SELECT\` chooses columns; \`FROM\` names the table:

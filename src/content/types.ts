@@ -26,16 +26,31 @@ export interface Problem {
   kind?: "query" | "dml";
   /** For kind "dml": the verification SELECT run after the mutation. */
   checkSql?: string;
+  /** Auto-derived at load time from the solution SQL — do not hand-set. */
+  topics?: string[];
+  /** Auto-assigned interview flavor tag ("FAANG-style", etc). Pattern-based,
+   *  never a real leaked question. */
+  company?: string;
 }
+
+export type Track = "core" | "interview" | "advanced";
 
 export interface Module {
   id: string;
   title: string;
   blurb: string;
+  /** Learning track this module belongs to (home groups modules by track). */
+  track?: Track;
   /** Markdown-lite: ## headings, **bold**, `inline`, ```sql blocks, - lists */
   theory: string;
   problems: Problem[];
 }
+
+export const TRACK_LABELS: Record<Track, string> = {
+  core: "Core SQL",
+  interview: "Interview essentials",
+  advanced: "Advanced",
+};
 
 export const DIFFICULTY_LABELS: Record<Difficulty, string> = {
   1: "intro",

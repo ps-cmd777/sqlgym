@@ -192,3 +192,16 @@ h1 { font-size: 21px; font-weight: 700; letter-spacing: -0.3px; margin-bottom: 4
 .summary-grid span { display: block; color: var(--muted); font-size: 11px;
   text-transform: uppercase; letter-spacing: 0.6px; }
 .loading { color: var(--muted); padding: 40px; text-align: center; }
+
+/* tracks + tags */
+.track { margin-bottom: 26px; }
+.track-h { font-size: 13px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.7px;
+  color: var(--accent-ink); margin-bottom: 12px; display: flex; align-items: baseline; gap: 12px; }
+.track-count { font-size: 11px; font-weight: 500; letter-spacing: 0.3px; color: var(--muted);
+  text-transform: none; }
+.tag-row { display: flex; flex-wrap: wrap; gap: 6px; margin: -8px 0 18px; }
+.pill-co { font-size: 11px; font-weight: 700; border-radius: 5px; padding: 2px 8px;
+  background: rgba(74, 58, 167, 0.10); color: #4a3aa7; white-space: nowrap; }
+@media (prefers-color-scheme: dark) { .pill-co { background: rgba(144,133,233,0.16); color: #9085e9; } }
+.pill-topic { font-size: 11px; border-radius: 999px; padding: 2px 9px; background: var(--page);
+  border: 1px solid var(--grid); color: var(--ink-2); white-space: nowrap; }

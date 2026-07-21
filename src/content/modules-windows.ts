@@ -4,7 +4,7 @@ import type { Module } from "./types";
 
 export const ctes: Module = {
   id: "ctes",
-  title: "Breaking big problems into steps (CTEs)",
+  title: "Common Table Expressions (CTEs)", track: "interview",
   blurb: "WITH lets you name intermediate results and build complex answers step by step — like showing your work in math.",
   theory: `## WITH is a workbench
 A CTE names an intermediate result. Chains of small CTEs beat one clever nested query in every interview: they're debuggable step by step, and you can narrate them.
@@ -91,7 +91,7 @@ ORDER BY refund_rate DESC, co.category`,
 
 export const windows1: Module = {
   id: "windows1",
-  title: "Ranking rows (window functions I)",
+  title: "Window functions: ranking", track: "interview",
   blurb: "\"Top 3 products per category\", \"each user's latest order\" — the two most-asked interview questions, one technique.",
   theory: `## Aggregate vs window
 \`GROUP BY\` collapses rows; a window function computes across related rows **without collapsing**. Syntax: \`fn() OVER (PARTITION BY … ORDER BY …)\`.
@@ -185,7 +185,7 @@ WHERE played_on >= '2025-06-01' AND played_on < '2025-07-01'`,
 
 export const windows2: Module = {
   id: "windows2",
-  title: "Trends & running totals (window functions II)",
+  title: "Window functions: analytics", track: "interview",
   blurb: "Compare each row to the previous one, build running totals and moving averages — the heart of trend analysis.",
   theory: `## Offset functions
 \`LAG(col) OVER (PARTITION BY … ORDER BY …)\` reads the previous row; \`LEAD\` the next. Day-over-day deltas, time-between-events, churn gaps — all LAG.
