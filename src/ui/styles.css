@@ -500,3 +500,20 @@ nav.top .btn { padding: 7px 13px; font-size: 13.5px; }
   font: 400 11px/1 var(--mono); letter-spacing: 0; text-transform: none; color: var(--ink-4);
 }
 .disc[open] > summary { color: var(--ink); }
+
+/* Translated errors: the plain sentence leads, the raw text stays one click
+   away because that is what a learner will meet in a real console. */
+.sql-error b { display: block; font-family: var(--sans); font-size: 15px; font-weight: 600;
+  color: var(--bad); margin-bottom: var(--s2); letter-spacing: -.012em; }
+.sql-error-hint { font-family: var(--sans); font-size: 13.5px; line-height: 1.6;
+  color: var(--ink-2); margin-bottom: var(--s3); }
+.sql-error-raw > summary {
+  cursor: pointer; list-style: none;
+  font: 500 10.5px/1 var(--mono); letter-spacing: .14em; text-transform: uppercase;
+  color: var(--ink-4);
+}
+.sql-error-raw > summary::-webkit-details-marker { display: none; }
+.sql-error-raw > summary:hover { color: var(--ink-3); }
+.sql-error-raw pre { margin-top: var(--s2); white-space: pre-wrap;
+  font: 450 12px/1.6 var(--mono); color: var(--ink-3); }
+.sql-error > pre { white-space: pre-wrap; font: 450 12.5px/1.6 var(--mono); }

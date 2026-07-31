@@ -7,6 +7,7 @@ import Landing from "./Landing";
 import type { Module, Problem } from "../content/types";
 import { STAGE_ORDER, STAGES } from "../content/types";
 import { runQuery, warm, type QueryResult } from "../engine/engine";
+import { explainError } from "../grader/explain";
 import { gradeProblem, type GradeOutcome } from "../grader/grader";
 import {
   currentStreak, DiffBadge, loadProgress, Markdown, recordSolveDay, ResultTable,
@@ -447,11 +448,31 @@ function Workspace({
             </div>
           )}
         </div>
-        {error && <div className="sql-error">{error}</div>}
+        {error && <SqlError raw={error} />}
         {outcome && !outcome.error && <VerdictBox verdict={outcome.verdict} />}
         {outcome?.verdict.correct && mod && <SolvedPanel problem={problem} mod={mod} />}
         {result && <ResultTable result={result} />}
       </div>
+    </div>
+  );
+}
+
+/**
+ * Database errors, translated. The raw text stays available because it is what
+ * a learner will meet in a real console — this teaches how to read it rather
+ * than replacing it.
+ */
+function SqlError({ raw }: { raw: string }) {
+  const ex = explainError(raw);
+  if (!ex) return <div className="sql-error"><pre>{raw}</pre></div>;
+  return (
+    <div className="sql-error">
+      <b>{ex.title}</b>
+      {ex.hint && <p className="sql-error-hint">{ex.hint}</p>}
+      <details className="sql-error-raw">
+        <summary>What Postgres said</summary>
+        <pre>{raw}</pre>
+      </details>
     </div>
   );
 }
