@@ -53,6 +53,8 @@ GROUP BY ROLLUP(category);
   problems: [
     {
       id: "ga1", title: "Completed and cancelled in one row", difficulty: 3, schema: "brightmart",
+      takeaway:
+        "`COUNT(*) FILTER (WHERE ...)` counts a subset inside one pass over the data. It replaces the older `SUM(CASE WHEN ... THEN 1 ELSE 0 END)` and says what it means.",
       prompt:
         "Return one row with `all_orders`, `completed`, and `cancelled` counts from the orders table. Use a single pass over the table.",
       hint: "COUNT(*) FILTER (WHERE ...) for the two subsets.",
@@ -64,6 +66,8 @@ FROM orders`,
     },
     {
       id: "ga2", title: "Plan mix per country, one pass", difficulty: 3, schema: "wavely",
+      takeaway:
+        "Several `FILTER` clauses in one SELECT give you a whole cross-tab from a single scan, with no self-joins and no UNION.",
       prompt:
         "For each `country`, return `country`, `total` (all subscriptions for users in that country), `free_count`, and `paid_count` (plan is not 'free'). Order by `country`.",
       hint: "Join subscriptions to users, then FILTER each aggregate.",
@@ -79,6 +83,8 @@ ORDER BY u.country`,
     },
     {
       id: "ga3", title: "Category totals with a grand total", difficulty: 4, schema: "brightmart",
+      takeaway:
+        "`ROLLUP(x)` adds a grand-total row on top of the per-x rows. The total row carries NULL in the grouped column, which is how you spot it.",
       prompt:
         "Return `category` and `product_count` for every product category, plus one final row holding the grand total where `category` shows the text `ALL`. Order so that the real categories come first alphabetically and the total row is last.",
       hint: "GROUP BY ROLLUP(category), COALESCE the NULL to 'ALL', and order by GROUPING(category).",
@@ -90,6 +96,8 @@ ORDER BY GROUPING(category), category`,
     },
     {
       id: "ga4", title: "Detail, subtotal and total together", difficulty: 4, schema: "wavely",
+      takeaway:
+        "`ROLLUP(a, b)` produces a hierarchy: detail, subtotal per a, then the overall total. It is one query where most people write three and UNION them.",
       prompt:
         "Using GROUPING SETS, return `country`, `plan` and `subs` counting subscriptions at three levels: per country and plan, per country, and overall. Show `ALL` in place of NULL for both label columns. Order by country then plan, with subtotal and total rows after their detail rows.",
       hint: "GROUPING SETS ((country, plan), (country), ()), then order by GROUPING(country), country, GROUPING(plan), plan.",
@@ -104,6 +112,8 @@ ORDER BY GROUPING(u.country), u.country, GROUPING(s.plan), s.plan`,
     },
     {
       id: "ga5", title: "Label which rows are totals", difficulty: 4, schema: "brightmart",
+      takeaway:
+        "`GROUPING(col)` returns 1 when the row is a total for that column and 0 otherwise, which is how you tell a real NULL apart from a subtotal marker.",
       prompt:
         "Return `country`, `is_total` (1 when the row is the grand total, otherwise 0) and `customers` counting customers, using ROLLUP over country. Order by `is_total`, then `country`.",
       hint: "GROUPING(country) gives you the flag.",
@@ -117,6 +127,8 @@ ORDER BY GROUPING(country), country`,
     },
     {
       id: "ga6", title: "Every combination with CUBE", difficulty: 4, schema: "brightmart",
+      takeaway:
+        "`CUBE(a, b)` gives every combination of grouping: by both, by each alone, and overall. Powerful, and it grows as 2^n, so keep n small.",
       prompt:
         "Using CUBE over `category` and order `status`, return `category`, `status` and `items` counting order-item rows, with `ALL` replacing NULL in both labels. Order by category then status, totals last within each level.",
       hint: "Join order_items to products and orders, then GROUP BY CUBE(p.category, o.status).",
@@ -132,6 +144,8 @@ ORDER BY GROUPING(p.category), p.category, GROUPING(o.status), o.status`,
     },
     {
       id: "ga7", title: "Distinct listeners and plays per genre", difficulty: 3, schema: "wavely",
+      takeaway:
+        "`COUNT(DISTINCT user_id)` counts people; `COUNT(*)` counts events. Mixing them up is how a report claims more listeners than the product has users.",
       prompt:
         "For each track `genre`, return `genre`, `plays` (number of play rows) and `listeners` (number of distinct users). Order by `plays` descending, then `genre`.",
       hint: "COUNT(*) versus COUNT(DISTINCT user_id).",
@@ -144,6 +158,8 @@ ORDER BY plays DESC, t.genre`,
     },
     {
       id: "ga8", title: "Long plays only, per genre", difficulty: 3, schema: "wavely",
+      takeaway:
+        "Putting the condition in `FILTER` keeps the ungated rows available to other aggregates in the same query. Putting it in `WHERE` removes them for everyone.",
       prompt:
         "For each `genre`, return `genre`, `plays` (all plays) and `long_plays` (plays where `seconds_played` is at least 120). Keep only genres with at least one long play. Order by `genre`.",
       hint: "FILTER inside the aggregate, then HAVING on that aggregate.",

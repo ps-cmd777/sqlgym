@@ -8,6 +8,8 @@ export const EXTRA: Record<string, Problem[]> = {
   windows1: [
     {
       id: "w7", title: "Top 3 longest tracks per genre", difficulty: 3, schema: "wavely",
+      takeaway:
+        "Top N per group with `rn <= 3`. Change one number and the same query answers top 1, top 5 or top 10.",
       prompt: "For each genre, return the 3 longest tracks: `genre`, `title`, `duration_s`. Break ties by title. Order by genre, then longest first.",
       hint: "ROW_NUMBER() OVER (PARTITION BY genre ORDER BY duration_s DESC, title), keep rn <= 3.",
       solution: `SELECT genre, title, duration_s FROM (
@@ -19,6 +21,8 @@ export const EXTRA: Record<string, Problem[]> = {
     },
     {
       id: "w8", title: "Price percentile of each product", difficulty: 4, schema: "brightmart",
+      takeaway:
+        "`PERCENT_RANK` places each row within its ordering as a fraction from 0 to 1, which is how you say 'this product is in the top 5% by price'.",
       prompt: "Return `product_name`, `price`, and `pct_rank` — each product's PERCENT_RANK by price (0 = cheapest), rounded to 3 decimals.",
       hint: "PERCENT_RANK() OVER (ORDER BY price).",
       solution: `SELECT product_name, price,
@@ -28,6 +32,8 @@ FROM products`,
     },
     {
       id: "w9", title: "Cumulative users over time", difficulty: 3, schema: "wavely",
+      takeaway:
+        "A cumulative count is `COUNT(*) OVER (ORDER BY date)`. It answers 'how many by this point', which is a different question from 'how many on this day'.",
       prompt: "Return `signup_date`, `new_users` (signups that day), and `cumulative` (running total of users up to and including that day). Ordered by date.",
       hint: "Aggregate per day, then SUM(new_users) OVER (ORDER BY signup_date).",
       solution: `WITH daily AS (SELECT signup_date, COUNT(*) AS new_users FROM users GROUP BY signup_date)
@@ -40,6 +46,8 @@ FROM daily ORDER BY signup_date`,
   windows2: [
     {
       id: "o7", title: "First and last play date per user", difficulty: 3, schema: "wavely",
+      takeaway:
+        "`MIN` and `MAX` over a date give the span in one pass, no self-join and no subquery.",
       prompt: "For each user who played anything, return `user_id`, `first_play`, `last_play` — using window functions (not GROUP BY). One row per user.",
       hint: "DISTINCT user_id with MIN(played_on) OVER (PARTITION BY user_id) and MAX(...) OVER (...).",
       solution: `SELECT DISTINCT user_id,
@@ -50,6 +58,8 @@ FROM plays`,
     },
     {
       id: "o8", title: "Days until each customer's next order", difficulty: 4, schema: "brightmart",
+      takeaway:
+        "`LEAD` looks forward to the next row, so 'days until next order' is subtraction. The most recent order has no next row, so it is NULL, which is correct.",
       prompt: "For customers with 2+ orders, return `customer_id`, `ordered_on`, and `days_to_next` (days until their following order). Skip the last order (no next). Order by customer_id, then date.",
       hint: "LEAD(ordered_on) OVER (PARTITION BY customer_id ORDER BY ordered_on); keep rows where next is not null.",
       solution: `WITH o AS (
@@ -63,6 +73,8 @@ FROM o WHERE next_on IS NOT NULL ORDER BY customer_id, ordered_on`,
     },
     {
       id: "o9", title: "Customer spend quartiles", difficulty: 4, schema: "brightmart",
+      takeaway:
+        "`NTILE(4)` buckets by rank, not by value, so quartiles hold equal numbers of customers rather than equal spend ranges.",
       prompt: "Split customers into 4 equal-size groups by completed-order spend (quantity × unit_price). Return `customer_id`, `spend` (2 dp), `quartile` (1 = lowest spenders).",
       hint: "Per-customer spend CTE, then NTILE(4) OVER (ORDER BY spend).",
       solution: `WITH spend AS (
@@ -79,6 +91,8 @@ FROM spend`,
   ctes: [
     {
       id: "c5", title: "Average order value per country", difficulty: 4, schema: "brightmart",
+      takeaway:
+        "Chain CTEs: one names the per-order value, the next averages it per country. Each step stays checkable on its own.",
       prompt: "Per country: `country` and `avg_order_value` (average value of a completed order, 2 dp), ordered by country. Build per-order totals in a CTE first.",
       hint: "CTE: order_id, customer_id, SUM(items). Outer: join customers, AVG per country.",
       solution: `WITH per_order AS (
@@ -94,6 +108,8 @@ GROUP BY c.country ORDER BY c.country`,
     },
     {
       id: "c6", title: "Best-selling product per category", difficulty: 4, schema: "brightmart",
+      takeaway:
+        "'Best per group' is rank-then-filter again. Once you see it, most 'top', 'latest' and 'best' questions become the same query.",
       prompt: "The single highest-revenue product in each category: `category`, `product_name`, `revenue` (2 dp, quantity × unit_price, any status). Ties by product_name. Order by category.",
       hint: "Revenue per product CTE, ROW_NUMBER per category, keep rn = 1.",
       solution: `WITH rev AS (
@@ -111,6 +127,8 @@ SELECT category, product_name, ROUND(r::numeric, 2) AS revenue FROM (
   patterns: [
     {
       id: "p7", title: "Each customer's second order date", difficulty: 3, schema: "brightmart",
+      takeaway:
+        "'Second' anything is `ROW_NUMBER` filtered to 2. Customers with only one order have no row 2 and drop out, which is usually what you want.",
       prompt: "For customers with 2+ orders, return `customer_id` and `second_order` (the date of their 2nd order by date, ties by order_id). Order by customer_id.",
       hint: "ROW_NUMBER() OVER (PARTITION BY customer_id ORDER BY ordered_on, order_id), keep rn = 2.",
       solution: `SELECT customer_id, ordered_on AS second_order FROM (
@@ -122,6 +140,8 @@ SELECT category, product_name, ROUND(r::numeric, 2) AS revenue FROM (
     },
     {
       id: "p8", title: "Users active in 2+ months of Q1 2025", difficulty: 4, schema: "wavely",
+      takeaway:
+        "Count distinct months per user, then filter on that count. Turning 'active in 2+ months' into a number first makes the condition simple.",
       prompt: "Return `user_id` of users who played tracks in at least 2 different months of Q1 2025 (Jan–Mar). Ascending.",
       hint: "COUNT(DISTINCT date_trunc('month', played_on)) >= 2 over the Q1 window.",
       solution: `SELECT user_id FROM (
@@ -133,6 +153,8 @@ SELECT category, product_name, ROUND(r::numeric, 2) AS revenue FROM (
     },
     {
       id: "p9", title: "Monthly revenue: completed vs cancelled", difficulty: 4, schema: "brightmart",
+      takeaway:
+        "Two `FILTER`ed aggregates put completed and cancelled side by side in one pass, which is what makes them comparable.",
       prompt: "Per month: `month` (date), `completed_rev` and `cancelled_rev` (item revenue split by order status, 2 dp, 0 where none). Order by month.",
       hint: "SUM(...) FILTER (WHERE status = 'completed') and the same for cancelled; COALESCE to 0.",
       solution: `SELECT date_trunc('month', o.ordered_on)::date AS month,
@@ -146,6 +168,8 @@ GROUP BY 1 ORDER BY month`,
   analytics: [
     {
       id: "a7", title: "Weekly new-user counts", difficulty: 3, schema: "wavely",
+      takeaway:
+        "`date_trunc('week', signup_date)` groups signups into weeks. Weekly smooths the daily noise without hiding a trend the way monthly can.",
       prompt: "Return `week` (Monday of the signup week, date) and `new_users`, ordered by week.",
       hint: "date_trunc('week', signup_date)::date.",
       solution: `SELECT date_trunc('week', signup_date)::date AS week, COUNT(*) AS new_users
@@ -154,6 +178,8 @@ FROM users GROUP BY 1 ORDER BY week`,
     },
     {
       id: "a8", title: "Overall refund rate", difficulty: 3, schema: "brightmart",
+      takeaway:
+        "A rate needs both halves filtered the same way, and a cast so integer division does not silently return 0.",
       prompt: "Of completed orders, what share were refunded? Return `refund_rate` = ROUND(refunded / completed, 4). One row.",
       hint: "LEFT JOIN refunds to completed orders; COUNT(DISTINCT refund order) / COUNT(DISTINCT order).",
       solution: `SELECT ROUND(COUNT(DISTINCT r.order_id)::numeric / COUNT(DISTINCT o.order_id), 4) AS refund_rate
@@ -163,6 +189,8 @@ WHERE o.status = 'completed'`,
     },
     {
       id: "a9", title: "Average completed orders per customer", difficulty: 3, schema: "brightmart",
+      takeaway:
+        "Average per customer means summing per customer first, then averaging those totals. Averaging raw rows answers a different question.",
       prompt: "Among customers who have any completed order, what's the average number of completed orders each? Return `avg_orders` (2 dp). One row.",
       hint: "COUNT(*) / COUNT(DISTINCT customer_id) over completed orders.",
       solution: `SELECT ROUND(COUNT(*)::numeric / COUNT(DISTINCT customer_id), 2) AS avg_orders
@@ -173,6 +201,8 @@ FROM orders WHERE status = 'completed'`,
   joins: [
     {
       id: "j7", title: "Customers buying from 2+ categories", difficulty: 3, schema: "brightmart",
+      takeaway:
+        "`COUNT(DISTINCT category)` counts categories, not order lines. Whenever a question says 'different' or 'across N kinds', `DISTINCT` belongs inside the count.",
       prompt: "How many customers bought products from 2 or more distinct categories (completed orders only)? Return one column `n`.",
       hint: "Join orders→items→products, GROUP BY customer, HAVING COUNT(DISTINCT category) >= 2, then count.",
       solution: `SELECT COUNT(*) AS n FROM (
@@ -187,6 +217,8 @@ FROM orders WHERE status = 'completed'`,
     },
     {
       id: "j8", title: "Completed orders by country", difficulty: 3, schema: "brightmart",
+      takeaway:
+        "You can join and group in the same query; the join runs first, then the grouping. Grouping by a column from the joined table is completely normal.",
       prompt: "For every country, return `country` and `orders` (count of completed orders — 0 if none). Most orders first, ties by country.",
       hint: "LEFT JOIN with the status filter in ON; COUNT(o.order_id).",
       solution: `SELECT c.country, COUNT(o.order_id) AS orders
@@ -199,6 +231,8 @@ GROUP BY c.country ORDER BY orders DESC, c.country`,
   subqueries: [
     {
       id: "s7", title: "Tracks played more than average", difficulty: 3, schema: "wavely",
+      takeaway:
+        "A subquery in the `HAVING` clause is evaluated once and compared against each group, which is how 'more than average' works without a temporary table.",
       prompt: "Return `track_id` and `plays` for tracks played more times than the average track's play count. Most plays first, ties by track_id.",
       hint: "Per-track play count CTE, then WHERE plays > (SELECT AVG(plays) FROM cte).",
       solution: `WITH pc AS (SELECT track_id, COUNT(*) AS plays FROM plays GROUP BY track_id)
@@ -209,6 +243,8 @@ ORDER BY plays DESC, track_id`,
     },
     {
       id: "s8", title: "Customers above the average order count", difficulty: 4, schema: "brightmart",
+      takeaway:
+        "Compute the benchmark in its own subquery rather than inline, so you can run it alone and check the number is what you expected.",
       prompt: "Return `customer_id` and `n` (their completed-order count) for customers with more completed orders than the average customer (averaged over customers who have any). Most first, ties by customer_id.",
       hint: "Per-customer count CTE, compare to (SELECT AVG(n) FROM cte).",
       solution: `WITH oc AS (SELECT customer_id, COUNT(*) AS n FROM orders WHERE status = 'completed' GROUP BY customer_id)

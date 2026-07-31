@@ -41,40 +41,76 @@ h1 { font-size: 21px; font-weight: 700; letter-spacing: -0.3px; margin-bottom: 4
 .btn.primary:disabled { opacity: 0.5; cursor: default; }
 .btn.ghost { border: none; background: none; color: var(--blue); padding: 4px 8px; }
 
-/* hero banner */
-.hero-banner { display: grid; grid-template-columns: 1.5fr 1fr; gap: 26px; align-items: center;
-  background: linear-gradient(135deg, var(--wash), transparent 60%), var(--surface);
-  border: 1px solid var(--border); border-radius: 18px; padding: 34px 36px; margin-bottom: 26px; }
-@media (max-width: 860px) { .hero-banner { grid-template-columns: 1fr; } }
-.hero-copy h1 { font-size: 30px; line-height: 1.2; letter-spacing: -0.6px; margin-bottom: 12px; }
-.hero-copy h1 em { color: var(--accent-ink); font-style: normal; font-family: var(--mono);
-  font-size: 26px; }
-.hero-copy p { color: var(--ink-2); font-size: 14.5px; max-width: 560px; }
-.hero-ctas { display: flex; gap: 10px; margin-top: 18px; }
-.hero-ctas .btn { padding: 10px 20px; border-radius: 10px; }
-.hero-stats { display: grid; gap: 10px; }
-.hero-stats .stat { background: var(--surface); border: 1px solid var(--border);
-  border-radius: 12px; padding: 12px 18px; }
-.hero-stats b { font-size: 24px; font-variant-numeric: tabular-nums; }
-.hero-stats b small { font-size: 14px; color: var(--muted); font-weight: 600; }
-.hero-stats span { display: block; font-size: 11px; color: var(--muted);
-  text-transform: uppercase; letter-spacing: 0.6px; }
+/* ---------------------------------------------------------------------------
+   Dashboard hierarchy.
+
+   The old dashboard gave a marketing banner, three stat tiles and twenty
+   identical module cards all the same visual weight, so it read as a file
+   listing rather than a curriculum. Now exactly one thing is loud — the next
+   problem to solve — and everything else is support.
+   ------------------------------------------------------------------------- */
+
+/* the one focal element: what to do next */
+.resume { display: grid; grid-template-columns: 1fr auto; gap: 24px; align-items: center;
+  background: linear-gradient(135deg, var(--wash), transparent 62%), var(--surface);
+  border: 1px solid var(--border); border-radius: 18px; padding: 30px 34px;
+  margin-bottom: 14px; cursor: pointer; transition: border-color .14s, transform .14s; }
+.resume:hover { border-color: var(--accent); transform: translateY(-1px); }
+.resume.is-done { cursor: default; }
+.resume.is-done:hover { border-color: var(--border); transform: none; }
+.resume-kicker { display: block; font-family: var(--mono); font-size: 11px;
+  letter-spacing: 0.8px; text-transform: uppercase; color: var(--accent-ink);
+  margin-bottom: 8px; }
+.resume-main h1 { font-size: 30px; line-height: 1.15; letter-spacing: -0.7px; margin: 0 0 12px; }
+.resume-meta { display: flex; flex-wrap: wrap; gap: 8px 14px; align-items: center;
+  font-size: 12.5px; color: var(--muted); }
+.tag-int { color: var(--accent-ink); background: var(--wash);
+  border-radius: 20px; padding: 2px 10px; font-size: 11.5px; }
+.resume-go { display: grid; gap: 8px; justify-items: end; }
+.resume-go .btn { padding: 11px 22px; border-radius: 10px; }
+.resume-alt { font-size: 12px; color: var(--muted); }
+@media (max-width: 720px) {
+  .resume { grid-template-columns: 1fr; padding: 22px 20px; }
+  .resume-go { justify-items: start; }
+  .resume-main h1 { font-size: 24px; }
+}
+
+/* stats demoted from three tiles to one quiet line */
+.statline { display: flex; flex-wrap: wrap; gap: 6px 22px; align-items: baseline;
+  font-size: 12.5px; color: var(--muted); padding: 0 4px; margin-bottom: 30px; }
+.statline b { font-size: 15px; color: var(--ink); font-variant-numeric: tabular-nums; }
+.statline a { margin-left: auto; }
+
 .dml-note { margin-top: 12px; font-size: 12.5px; color: var(--accent-ink);
   background: var(--wash); border-radius: 8px; padding: 8px 12px; }
 
-/* home: module cards */
-.mods { display: grid; grid-template-columns: repeat(auto-fill, minmax(330px, 1fr)); gap: 14px; }
-.mod-card { background: var(--surface); border: 1px solid var(--border); border-radius: 14px;
-  padding: 18px 20px; cursor: pointer; transition: border-color .12s; position: relative; }
-.mod-card:hover { border-color: var(--accent); }
-.mod-card h2 { font-size: 15.5px; font-weight: 650; margin-bottom: 4px; }
-.mod-card .n { position: absolute; top: 16px; right: 18px; font-size: 11px;
-  color: var(--muted); font-variant-numeric: tabular-nums; }
-.mod-card p { color: var(--ink-2); font-size: 13px; min-height: 38px; }
-.progress-bar { height: 5px; background: var(--grid); border-radius: 3px; margin-top: 12px;
+/* tracks read as a progression, modules as a list rather than 20 cards */
+.track-bar { height: 4px; width: 120px; background: var(--grid); border-radius: 3px;
+  overflow: hidden; display: inline-block; vertical-align: middle;
+  margin: 0 0 10px 0; }
+.track-bar i { display: block; height: 100%; background: var(--accent); border-radius: 3px;
+  transition: width .5s ease; }
+.modlist { border-top: 1px solid var(--border); }
+.modrow { display: grid; grid-template-columns: 20px minmax(0, 15rem) minmax(0, 1fr) 150px;
+  gap: 16px; align-items: center; padding: 15px 6px;
+  border-bottom: 1px solid var(--border); text-decoration: none; color: inherit;
+  transition: background .12s, padding-left .12s; }
+.modrow:hover { background: var(--wash); padding-left: 12px; }
+.modrow-mark { color: var(--accent); font-weight: 700; }
+.modrow-t { font-size: 15px; font-weight: 620; }
+.modrow-b { font-size: 13px; color: var(--ink-2); }
+.modrow-p { display: grid; gap: 5px; }
+.modrow-n { font-size: 11.5px; color: var(--muted); font-variant-numeric: tabular-nums; }
+.modrow[data-done="true"] .modrow-n { color: var(--accent-ink); font-weight: 600; }
+.progress-bar { height: 5px; background: var(--grid); border-radius: 3px;
   overflow: hidden; }
 .progress-bar i { display: block; height: 100%; background: var(--accent); border-radius: 3px; }
-.mod-card .pct { font-size: 11.5px; color: var(--muted); margin-top: 5px; }
+@media (max-width: 860px) {
+  .modrow { grid-template-columns: 20px minmax(0, 1fr) 92px; gap: 6px 12px; }
+  .modrow-t { grid-row: 1; grid-column: 2; }
+  .modrow-p { grid-row: 1; grid-column: 3; }
+  .modrow-b { grid-row: 2; grid-column: 2 / -1; }
+}
 .hero { display: flex; gap: 12px; align-items: center; background: var(--surface);
   border: 1px solid var(--border); border-radius: 14px; padding: 16px 20px; margin-bottom: 20px; }
 .hero .stat { margin-right: 18px; }
@@ -111,8 +147,13 @@ h1 { font-size: 21px; font-weight: 700; letter-spacing: -0.3px; margin-bottom: 4
 .solved-mark { color: var(--good); font-weight: 700; width: 18px; }
 
 /* problem workspace */
-.work { display: grid; grid-template-columns: 420px 1fr; gap: 16px; align-items: start; }
-@media (max-width: 980px) { .work { grid-template-columns: 1fr; } }
+/* minmax(0, …) on the editor column: without it a long single-line query sizes
+   the column to its own content and pushes the whole right-hand pane, verdict
+   and solved panel included, off the side of the page. */
+.work { display: grid; grid-template-columns: 420px minmax(0, 1fr); gap: 16px;
+  align-items: start; }
+.work > * { min-width: 0; }
+@media (max-width: 980px) { .work { grid-template-columns: minmax(0, 1fr); } }
 .card { background: var(--surface); border: 1px solid var(--border); border-radius: 14px;
   padding: 18px 20px; }
 .card h3 { font-size: 12px; letter-spacing: 0.7px; text-transform: uppercase;
@@ -139,11 +180,25 @@ h1 { font-size: 21px; font-weight: 700; letter-spacing: -0.3px; margin-bottom: 4
   padding: 10px 12px; font-family: var(--mono); font-size: 12.5px; overflow-x: auto;
   white-space: pre-wrap; }
 
+/* Editor: this is where the time is actually spent, so it gets the typography
+   of a real IDE — larger type, generous line height, breathing room around the
+   text rather than against the border. */
 .editor-card { padding: 0; overflow: hidden; }
-.editor-card .cm-editor { font-size: 13.5px; }
+.editor-card .cm-editor { font-size: 14.5px; }
+.editor-card .cm-editor .cm-content { padding: 14px 0; line-height: 1.75;
+  font-family: var(--mono); }
+.editor-card .cm-editor .cm-line { padding: 0 14px; }
+.editor-card .cm-editor .cm-gutters { background: transparent;
+  border-right: 1px solid var(--grid); color: var(--muted); }
+.editor-card .cm-editor .cm-lineNumbers .cm-gutterElement { padding: 0 10px 0 14px; }
+.editor-card .cm-editor .cm-activeLine { background: var(--wash); }
+.editor-card .cm-editor .cm-activeLineGutter { background: transparent; color: var(--accent-ink); }
+.editor-card .cm-editor .cm-cursor { border-left-width: 2px; }
 .editor-card .cm-editor.cm-focused { outline: none; }
+.editor-card .cm-editor .cm-selectionBackground,
+.editor-card .cm-editor.cm-focused .cm-selectionBackground { background: var(--wash); }
 .editor-bar { display: flex; gap: 10px; align-items: center; padding: 10px 14px;
-  border-top: 1px solid var(--grid); }
+  border-top: 1px solid var(--grid); background: var(--page); }
 .editor-bar .spacer { flex: 1; }
 .editor-bar .ms { color: var(--muted); font-size: 12px; font-variant-numeric: tabular-nums; }
 
@@ -200,9 +255,6 @@ h1 { font-size: 21px; font-weight: 700; letter-spacing: -0.3px; margin-bottom: 4
 .track-count { font-size: 11px; font-weight: 500; letter-spacing: 0.3px; color: var(--muted);
   text-transform: none; }
 .tag-row { display: flex; flex-wrap: wrap; gap: 6px; margin: -8px 0 18px; }
-.pill-co { font-size: 11px; font-weight: 700; border-radius: 5px; padding: 2px 8px;
-  background: rgba(74, 58, 167, 0.10); color: #4a3aa7; white-space: nowrap; }
-@media (prefers-color-scheme: dark) { .pill-co { background: rgba(144,133,233,0.16); color: #9085e9; } }
 .pill-topic { font-size: 11px; border-radius: 999px; padding: 2px 9px; background: var(--page);
   border: 1px solid var(--grid); color: var(--ink-2); white-space: nowrap; }
 
@@ -220,3 +272,72 @@ h1 { font-size: 21px; font-weight: 700; letter-spacing: -0.3px; margin-bottom: 4
 .expected .rtable { max-height: 260px; border-color: color-mix(in srgb, var(--accent) 35%, var(--grid)); }
 .theory ol { margin: 8px 0 8px 20px; color: var(--ink-2); }
 .theory ol li { margin: 4px 0; }
+
+/* The header tagline collided with the nav buttons on narrow screens. It is
+   marketing copy, not navigation, so it goes first on small viewports. */
+@media (max-width: 860px) {
+  .tagline { display: none; }
+  .statline a { margin-left: 0; }
+  nav.top { gap: 10px; padding: 0 14px; }
+  nav.top .right { gap: 6px; }
+  nav.top .btn { padding: 7px 11px; font-size: 12.5px; white-space: nowrap; }
+  .wrap { padding: 18px 14px 70px; }
+}
+
+/* Worked answer, shown beside the editor in learning mode. Interview mode
+   passes hideHelp and never renders this. */
+.answer { border-top: 1px solid var(--border); }
+.answer-hd { display: flex; align-items: center; justify-content: space-between;
+  padding: 10px 14px 6px; font-size: 11.5px; font-weight: 700; letter-spacing: 0.7px;
+  text-transform: uppercase; color: var(--muted); }
+.answer pre { background: var(--page); border-top: 1px solid var(--grid);
+  border-bottom: 1px solid var(--grid); padding: 14px 16px; overflow-x: auto;
+  font-family: var(--mono); font-size: 12.5px; line-height: 1.7; color: var(--ink-2); }
+.answer-note { padding: 10px 16px 14px; font-size: 12.5px; color: var(--muted); }
+
+/* Payoff after a correct answer: what you learned, where you are, what next. */
+.solved { background: var(--surface); border: 1px solid var(--accent);
+  border-radius: 14px; padding: 16px 18px; margin-bottom: 14px; }
+.solved.is-complete { background: linear-gradient(135deg, var(--wash), transparent 65%), var(--surface); }
+.solved-hd { display: flex; align-items: baseline; gap: 10px; }
+.solved-tick { color: var(--accent); font-weight: 800; }
+.solved-hd b { font-size: 15.5px; }
+.solved.is-complete .solved-hd b { font-size: 17px; color: var(--accent-ink); }
+.solved-count { margin-left: auto; font-size: 12px; color: var(--muted);
+  font-variant-numeric: tabular-nums; }
+.solved-bar { height: 5px; background: var(--grid); border-radius: 3px;
+  overflow: hidden; margin: 10px 0 0; }
+.solved-bar i { display: block; height: 100%; background: var(--accent);
+  border-radius: 3px; transition: width .5s ease; }
+.solved-take { margin-top: 12px; font-size: 13.5px; color: var(--ink-2);
+  background: var(--page); border-radius: 8px; padding: 10px 12px; }
+.solved-take b { color: var(--ink); }
+.solved-take code { font-family: var(--mono); font-size: 12.5px;
+  background: var(--wash); padding: 1px 5px; border-radius: 4px; }
+.solved-next { display: flex; align-items: center; gap: 14px; flex-wrap: wrap;
+  margin-top: 14px; font-size: 13px; color: var(--ink-2); }
+.solved-next .btn { margin-left: auto; }
+@media (max-width: 620px) { .solved-next .btn { margin-left: 0; } }
+
+/* Module page: say where you are before the wall of theory. The page used to
+   open with a bare title and a list, so there was no sense of a curriculum. */
+.modhead { display: grid; grid-template-columns: 1fr auto; gap: 20px;
+  align-items: center; background: var(--surface); border: 1px solid var(--border);
+  border-radius: 16px; padding: 22px 26px; margin-bottom: 18px; }
+.modhead h1 { font-size: 24px; letter-spacing: -0.5px; margin-bottom: 6px; }
+.modhead-blurb { color: var(--ink-2); font-size: 14px; max-width: 62ch; }
+.modhead-meta { display: flex; flex-wrap: wrap; gap: 6px 18px; margin-top: 12px;
+  font-size: 12.5px; color: var(--muted); }
+.modhead-meta b { color: var(--ink); font-variant-numeric: tabular-nums; }
+.modhead-go .btn { padding: 11px 22px; border-radius: 10px; }
+.modhead-done { color: var(--accent-ink); font-weight: 650; font-size: 14px; }
+@media (max-width: 720px) { .modhead { grid-template-columns: 1fr; } }
+
+/* numbered rows, so a module reads as a sequence rather than a bag of links */
+.plist .prow[data-done="true"] { background: var(--wash); border-color: transparent; }
+.plist .prow .solved-mark { font-variant-numeric: tabular-nums; text-align: center;
+  color: var(--muted); font-weight: 600; font-size: 12.5px; }
+.plist .prow[data-done="true"] .solved-mark { color: var(--good); font-size: 14px; }
+.prow .t { flex: 1; }
+.prow-min { font-size: 11.5px; color: var(--muted); white-space: nowrap; }
+@media (max-width: 620px) { .prow-min { display: none; } }

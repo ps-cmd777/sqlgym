@@ -152,15 +152,16 @@ export default function Landing() {
           <div className="lp-hero-copy">
             <h1 className="lp-h1">Get good at SQL by <em>writing</em> SQL.</h1>
             <p className="lp-hero-sub">
-              {problems} problems against a real Postgres database running in this browser
-              tab. Your query executes. Your results get compared. Nothing is graded by
-              matching text.
+              Walk into the interview having already solved the questions. {problems} problems,
+              from your first SELECT to the window functions senior screens actually ask.
             </p>
             <div className="lp-hero-cta">
               <Cta />
               <a className="lp-btn lp-btn-ghost" href="#practice">See how grading works</a>
             </div>
-            <p className="lp-hero-note">No account. No install. Nothing leaves your machine.</p>
+            <p className="lp-hero-note">
+              Real Postgres, in this tab. No account, no install, nothing leaves your machine.
+            </p>
           </div>
           <div className="lp-hero-vis"><QueryCard /></div>
         </div>
@@ -212,9 +213,116 @@ export default function Landing() {
         </div>
       </Sec>
 
-      {/* ---------------- 02 practice: feature card + terminal ---------------- */}
+      {/* ---------------- 02 how grading works: the side-by-side -------------- */}
       <Sec n="02" id="practice">
-        <p className="lp-eyebrow lp-rv">Interactive practice</p>
+        <p className="lp-eyebrow lp-rv">How grading works</p>
+        <div className="lp-head lp-rv">
+          <h2>Different query. Same result. Correct.</h2>
+          <p className="lp-lede">
+            Your query is executed and the rows it returns are compared with the rows the
+            answer returns. Different formatting, different aliases, a different route to
+            the same result: all fine.
+          </p>
+        </div>
+        <div className="lp-vs lp-rv">
+          <article className="lp-pane is-them">
+            <header className="lp-pane-hd">If it were graded as text</header>
+            <div className="lp-pane-bd">
+              <div className="lp-step">
+                <span className="lb">You wrote</span>
+                <div className="bx">{`SELECT artist, COUNT(*) AS tracks
+FROM tracks
+GROUP BY artist`}</div>
+              </div>
+              <div className="lp-step">
+                <span className="lb">Expected answer</span>
+                <div className="bx">{`SELECT artist, count(*) AS tracks
+FROM tracks GROUP BY 1`}</div>
+              </div>
+              <p className="lp-arrow">compare the text</p>
+              <p className="lp-verdict bad">
+                ✕ Rejected <small>Formatting and aliasing differ.</small>
+              </p>
+            </div>
+          </article>
+
+          <article className="lp-pane">
+            <header className="lp-pane-hd">SQLGym · execution comparison</header>
+            <div className="lp-pane-bd">
+              <div className="lp-step">
+                <span className="lb">You wrote</span>
+                <div className="bx">{`SELECT artist, COUNT(*) AS tracks
+FROM tracks
+GROUP BY artist`}</div>
+              </div>
+              <p className="lp-arrow">run it against Postgres</p>
+              <div className="lp-step">
+                <span className="lb">Rows returned</span>
+                <div className="bx">{`8 rows · matches expected result set`}</div>
+              </div>
+              <p className="lp-verdict good">
+                ✓ Correct <small>Different query. Same rows. That is what matters.</small>
+              </p>
+            </div>
+          </article>
+        </div>
+      </Sec>
+
+      {/* ---------------- 03 the hidden dataset ------------------------------- */}
+      <Sec n="03">
+        <p className="lp-eyebrow lp-rv">The hidden dataset</p>
+        <div className="lp-head lp-rv">
+          <h2>You cannot pass by memorising an answer.</h2>
+          <p className="lp-lede">
+            Executing your query is fair, and every serious practice site does it. But it has
+            a hole nobody closes: if you can see the data, you can hardcode what you saw. So
+            every submission here runs twice.
+          </p>
+        </div>
+        <div className="lp-cheat lp-rv">
+          <div className="lp-seq">
+            <div className="lp-cheat-q">
+              <b>Which customer spent the most?</b>
+              <span style={{ fontSize: 14.5, color: "var(--lp-ink-3)" }}>
+                The learner peeks at the visible data, sees the answer is customer 15,
+                and writes it in instead of computing it.
+              </span>
+              <code>WHERE customer_id = <i>15</i></code>
+            </div>
+            <div className="lp-runs">
+              <div>
+                <span className="tag">Run 1 · visible data · seed 1101</span>
+                <div className="rows">
+                  top spender = <u>15</u><br />
+                  returned 1 row<br />
+                  <span style={{ color: "var(--lp-green-ink)", fontWeight: 600 }}>✓ matches</span>
+                </div>
+              </div>
+              <div>
+                <span className="tag">Run 2 · hidden data · seed 7907</span>
+                <div className="rows">
+                  top spender = <u>41</u><br />
+                  returned 0 rows<br />
+                  <span style={{ color: "var(--lp-red)", fontWeight: 600 }}>✕ no match</span>
+                </div>
+              </div>
+            </div>
+            <div style={{ padding: "var(--s5)", borderTop: "1px solid var(--lp-rule-2)" }}>
+              <p className="lp-verdict bad" style={{ margin: 0 }}>
+                ✕ Passed visible, failed hidden
+                <small>Check for a hardcoded value. The query has to compute the answer.</small>
+              </p>
+            </div>
+          </div>
+        </div>
+        <p className="lp-hero-note lp-rv" style={{ marginTop: "var(--s5)" }}>
+          The same two runs verify every canonical solution in CI, so a broken problem cannot ship.
+        </p>
+      </Sec>
+
+      {/* ---------------- 04 feedback quality --------------------------------- */}
+      <Sec n="04">
+        <p className="lp-eyebrow lp-rv">Feedback</p>
         <div className="lp-head lp-rv">
           <h2>You get told exactly what was wrong.</h2>
           <p className="lp-lede">
@@ -248,7 +356,7 @@ export default function Landing() {
       </Sec>
 
       {/* ---------------- 03 progress ---------------------------------------- */}
-      <Sec n="03">
+      <Sec n="05">
         <p className="lp-eyebrow lp-rv">Progress</p>
         <div className="lp-head lp-rv">
           <h2>Track what you have actually mastered.</h2>
@@ -280,7 +388,7 @@ export default function Landing() {
       </section>
 
       {/* ---------------- 04 learning path ----------------------------------- */}
-      <Sec n="04" id="path">
+      <Sec n="06" id="path">
         <p className="lp-eyebrow lp-rv">Learning path</p>
         <div className="lp-head lp-rv">
           <h2>{modules} modules, in the order the ideas build.</h2>
@@ -305,7 +413,7 @@ export default function Landing() {
       </Sec>
 
       {/* ---------------- 05 interview --------------------------------------- */}
-      <Sec n="05" id="interview">
+      <Sec n="07" id="interview">
         <p className="lp-eyebrow lp-rv">Interview preparation</p>
         <div className="lp-head lp-rv">
           <h2>{interview} problems drawn from what actually gets asked.</h2>
@@ -326,7 +434,7 @@ export default function Landing() {
       </Sec>
 
       {/* ---------------- 06 open source -------------------------------------- */}
-      <Sec n="06">
+      <Sec n="08">
         <p className="lp-eyebrow lp-rv">Open source</p>
         <div className="lp-split lp-rv">
           <div>
@@ -354,7 +462,7 @@ export default function Landing() {
       </Sec>
 
       {/* ---------------- 07 pricing ------------------------------------------ */}
-      <Sec n="07" id="pricing">
+      <Sec n="09" id="pricing">
         <p className="lp-eyebrow lp-rv">Pricing</p>
         <div className="lp-split lp-rv">
           <div>
@@ -377,7 +485,7 @@ export default function Landing() {
       </Sec>
 
       {/* ---------------- 08 FAQ ---------------------------------------------- */}
-      <Sec n="08">
+      <Sec n="10">
         <p className="lp-eyebrow lp-rv">Questions</p>
         <h2 className="lp-rv">Reasonable things to ask.</h2>
         <div className="lp-grid lp-g2 lp-rv" style={{ marginTop: "var(--s6)" }}>
@@ -399,7 +507,8 @@ export default function Landing() {
             Open the editor.
           </h2>
           <p className="lp-lede" style={{ margin: "0 auto var(--s6)" }}>
-            {problems} problems. Real Postgres. Nothing to install.
+            The SQL round should be the easy part of the interview. {problems} problems, free,
+            no account, first one in about ninety seconds.
           </p>
           <Cta />
         </div>

@@ -471,3 +471,96 @@
   .lp-modrow .bl { grid-row: 2; }
 }
 @media (max-width: 620px) { .lp-run b, .lp-run span { white-space: nowrap; } }
+
+/* ============================================================================
+   Two explainer sections: how grading works, and the hidden-dataset check.
+   ----------------------------------------------------------------------------
+   These are the product's two real differentiators and they were previously
+   one sentence each inside a tile. Both are now shown rather than described:
+   a visitor should understand them without reading a paragraph.
+   ========================================================================== */
+
+.lp { --lp-red: #b4472f; --lp-red-wash: rgba(180, 71, 47, .07); }
+@media (prefers-color-scheme: dark) {
+  .lp { --lp-red: #ff9d8a; --lp-red-wash: rgba(255, 157, 138, .10); }
+}
+
+/* --- side-by-side comparison ---------------------------------------------- */
+.lp-vs { display: grid; gap: var(--s5); grid-template-columns: 1fr 1fr; align-items: stretch; }
+@media (max-width: 860px) { .lp-vs { grid-template-columns: 1fr; } }
+
+.lp-pane {
+  border: 1px solid var(--lp-rule); border-radius: 14px; overflow: hidden;
+  background: var(--lp-card); display: flex; flex-direction: column;
+}
+.lp-pane.is-them { background: var(--lp-paper-2); }
+.lp-pane-hd {
+  padding: 11px var(--s5); border-bottom: 1px solid var(--lp-rule-2);
+  font: 500 11.5px/1 var(--lp-mono); letter-spacing: .12em; text-transform: uppercase;
+  color: var(--lp-faint); display: flex; gap: var(--s3); align-items: center;
+}
+.lp-pane-bd { padding: var(--s5); display: grid; gap: var(--s4); flex: 1; }
+
+.lp-step { display: grid; gap: 5px; }
+.lp-step .lb {
+  font: 500 10.5px/1 var(--lp-mono); letter-spacing: .1em;
+  text-transform: uppercase; color: var(--lp-faint);
+}
+.lp-step .bx {
+  font: 450 12.5px/1.6 var(--lp-mono); color: var(--lp-ink-2);
+  background: var(--lp-paper); border: 1px solid var(--lp-rule-2);
+  border-radius: 8px; padding: 9px 11px; overflow-x: auto; white-space: pre;
+}
+.lp-pane.is-them .lp-step .bx { background: var(--lp-card); }
+.lp-arrow {
+  font: 400 12px/1 var(--lp-mono); color: var(--lp-faint);
+  display: flex; align-items: center; gap: var(--s3);
+}
+.lp-arrow::before { content: "↓"; font-size: 14px; }
+
+.lp-verdict {
+  margin-top: auto; border-radius: 8px; padding: 11px 13px;
+  font: 500 13.5px/1.5 var(--lp-sans); display: flex; gap: var(--s3);
+  align-items: baseline;
+}
+.lp-verdict.bad  { background: var(--lp-red-wash);   color: var(--lp-red); }
+.lp-verdict.good { background: var(--lp-green-wash); color: var(--lp-green-ink); }
+.lp-verdict small { font: 400 12.5px/1.5 var(--lp-sans); opacity: .85; }
+
+/* --- hidden-dataset demo, revealed in steps ------------------------------- */
+.lp-cheat { border: 1px solid var(--lp-rule); border-radius: 14px; overflow: hidden; background: var(--lp-card); }
+.lp-cheat-q {
+  padding: var(--s5); border-bottom: 1px solid var(--lp-rule-2); background: var(--lp-paper-2);
+}
+.lp-cheat-q b { display: block; font-size: 16px; margin-bottom: 6px; }
+.lp-cheat-q code {
+  font: 450 13px/1.7 var(--lp-mono); color: var(--lp-ink-2);
+  display: block; margin-top: var(--s3);
+}
+.lp-cheat-q code i { font-style: normal; color: var(--lp-red); font-weight: 600; }
+.lp-runs { display: grid; grid-template-columns: 1fr 1fr; }
+.lp-runs > div { padding: var(--s5); }
+.lp-runs > div + div { border-left: 1px solid var(--lp-rule-2); }
+@media (max-width: 720px) {
+  .lp-runs { grid-template-columns: 1fr; }
+  .lp-runs > div + div { border-left: 0; border-top: 1px solid var(--lp-rule-2); }
+}
+.lp-runs .tag {
+  font: 500 10.5px/1 var(--lp-mono); letter-spacing: .1em; text-transform: uppercase;
+  color: var(--lp-faint); display: block; margin-bottom: var(--s3);
+}
+.lp-runs .rows { font: 450 12.5px/1.9 var(--lp-mono); color: var(--lp-ink-2); }
+.lp-runs .rows u { text-decoration: none; color: var(--lp-ink); font-weight: 600; }
+
+/* stepped reveal: each element fades in after the one before it */
+.lp-seq > * { opacity: 0; transform: translateY(6px); }
+.lp-rv[data-in="true"] .lp-seq > * { animation: lp-up .5s cubic-bezier(.2,.7,.3,1) forwards; }
+.lp-rv[data-in="true"] .lp-seq > *:nth-child(1) { animation-delay: .05s; }
+.lp-rv[data-in="true"] .lp-seq > *:nth-child(2) { animation-delay: .45s; }
+.lp-rv[data-in="true"] .lp-seq > *:nth-child(3) { animation-delay: .85s; }
+.lp-rv[data-in="true"] .lp-seq > *:nth-child(4) { animation-delay: 1.25s; }
+.lp-rv[data-in="true"] .lp-seq > *:nth-child(5) { animation-delay: 1.65s; }
+@media (prefers-reduced-motion: reduce) {
+  .lp-seq > * { opacity: 1; transform: none; }
+  .lp-rv[data-in="true"] .lp-seq > * { animation: none; }
+}

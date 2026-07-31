@@ -1,9 +1,10 @@
 import CodeMirror from "@uiw/react-codemirror";
 import { sql as sqlLang, PostgreSQL } from "@codemirror/lang-sql";
+import { EditorView } from "@codemirror/view";
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { ALL_TOPICS, interviewDraw, MODULES, moduleOf, problemById } from "../content";
 import Landing from "./Landing";
-import type { Problem, Track } from "../content/types";
+import type { Module, Problem, Track } from "../content/types";
 import { TRACK_LABELS } from "../content/types";
 import { runQuery, warm, type QueryResult } from "../engine/engine";
 import { gradeProblem, type GradeOutcome } from "../grader/grader";
@@ -64,7 +65,7 @@ export default function App() {
         <a className="brand" href="#/app">sql<em>gym</em></a>
         {crumb && <span className="crumb">/ {crumb}</span>}
         <span className="right">
-          real Postgres in your browser · nothing leaves this machine
+          <span className="tagline">real Postgres in your browser · nothing leaves this machine</span>
           <a className="btn" href="#/">Home</a>
           <a className="btn" href="#/bank">All problems</a>
           <a className="btn" href="#/interview">⏱ Interview mode</a>
@@ -89,33 +90,59 @@ function Home({ progress }: { progress: Progress }) {
   const hard = MODULES.flatMap((m) => m.problems)
     .filter((p) => p.difficulty === 4 && progress[p.id] === "solved").length;
   const streak = currentStreak();
-  const firstUnsolved = MODULES.flatMap((m) => m.problems).find((p) => progress[p.id] !== "solved");
+
+  // The one thing the dashboard should answer: what do I do next? Find the
+  // first unsolved problem and the module it sits in, so the focal card can
+  // say where you are rather than just linking somewhere.
+  const next = (() => {
+    for (const m of MODULES) {
+      const i = m.problems.findIndex((p) => progress[p.id] !== "solved");
+      if (i !== -1) return { mod: m, problem: m.problems[i], index: i };
+    }
+    return null;
+  })();
+
   return (
     <>
-      <section className="hero-banner">
-        <div className="hero-copy">
-          <h1>Master SQL, from <em>SELECT</em> to senior interviews.</h1>
-          <p>
-            {MODULES.length} modules · {total} original problems · graded by executing your SQL
-            against <strong>real Postgres in your browser</strong> and comparing results —
-            including a hidden dataset your query has never seen. No account. Nothing leaves
-            your machine.
-          </p>
-          <div className="hero-ctas">
-            {firstUnsolved && (
-              <a className="btn primary" href={`#/p/${firstUnsolved.id}`}>
-                {solved ? "Continue where you left off" : "Start learning"}
-              </a>
-            )}
-            <a className="btn" href="#/interview">Timed interview mode</a>
+      {next ? (
+        <section className="resume" onClick={() => (location.hash = `#/p/${next.problem.id}`)}>
+          <div className="resume-main">
+            <span className="resume-kicker">
+              {solved ? "Continue" : "Start here"} · {next.mod.title}
+            </span>
+            <h1>{next.problem.title}</h1>
+            <div className="resume-meta">
+              <DiffBadge d={next.problem.difficulty} />
+              <span>Problem {next.index + 1} of {next.mod.problems.length}</span>
+              <span>~{estMinutes(next.problem.difficulty)} min (estimate)</span>
+              {next.problem.interview && <span className="tag-int">Appears in interview mode</span>}
+            </div>
           </div>
-        </div>
-        <div className="hero-stats">
-          <div className="stat"><b>{solved}<small>/{total}</small></b><span>solved</span></div>
-          <div className="stat"><b>{hard}</b><span>hard solved</span></div>
-          <div className="stat"><b>{streak}{streak > 0 ? " 🔥" : ""}</b><span>day streak</span></div>
-        </div>
-      </section>
+          <div className="resume-go">
+            <span className="btn primary">{solved ? "Continue" : "Start"} →</span>
+            <a className="resume-alt" href="#/interview" onClick={(e) => e.stopPropagation()}>
+              or run a timed interview
+            </a>
+          </div>
+        </section>
+      ) : (
+        <section className="resume is-done">
+          <div className="resume-main">
+            <span className="resume-kicker">All clear</span>
+            <h1>You have solved all {total} problems.</h1>
+            <div className="resume-meta"><span>Timed interview mode is the next challenge.</span></div>
+          </div>
+          <div className="resume-go"><a className="btn primary" href="#/interview">Interview mode →</a></div>
+        </section>
+      )}
+
+      <div className="statline">
+        <span><b>{solved}</b>/{total} solved</span>
+        <span><b>{hard}</b> hard solved</span>
+        <span><b>{streak}</b> day streak{streak > 0 ? " 🔥" : ""}</span>
+        <a href="#/bank">All problems →</a>
+      </div>
+
       {(["core", "interview", "advanced"] as Track[]).map((track) => {
         const mods = MODULES.filter((m) => (m.track ?? "core") === track);
         if (!mods.length) return null;
@@ -123,20 +150,25 @@ function Home({ progress }: { progress: Progress }) {
         const tTotal = mods.reduce((n, m) => n + m.problems.length, 0);
         return (
           <section key={track} className="track">
-            <h2 className="track-h">{TRACK_LABELS[track]}
-              <span className="track-count">{tSolved}/{tTotal} solved · {mods.length} modules</span></h2>
-            <div className="mods">
+            <h2 className="track-h">
+              {TRACK_LABELS[track]}
+              <span className="track-bar"><i style={{ width: `${(tSolved / tTotal) * 100}%` }} /></span>
+              <span className="track-count">{tSolved}/{tTotal}</span>
+            </h2>
+            <div className="modlist">
               {mods.map((m) => {
                 const done = m.problems.filter((p) => progress[p.id] === "solved").length;
+                const mastered = done === m.problems.length;
                 return (
-                  <div className="mod-card" key={m.id} onClick={() => (location.hash = `#/m/${m.id}`)}>
-                    <h2>{m.title}</h2>
-                    <p>{m.blurb}</p>
-                    <div className="progress-bar">
-                      <i style={{ width: `${(done / m.problems.length) * 100}%` }} />
-                    </div>
-                    <div className="pct">{done}/{m.problems.length} solved</div>
-                  </div>
+                  <a className="modrow" data-done={mastered} href={`#/m/${m.id}`} key={m.id}>
+                    <span className="modrow-mark">{mastered ? "✓" : ""}</span>
+                    <span className="modrow-t">{m.title}</span>
+                    <span className="modrow-b">{m.blurb}</span>
+                    <span className="modrow-p">
+                      <span className="progress-bar"><i style={{ width: `${(done / m.problems.length) * 100}%` }} /></span>
+                      <span className="modrow-n">{mastered ? "mastered" : `${done}/${m.problems.length}`}</span>
+                    </span>
+                  </a>
                 );
               })}
             </div>
@@ -147,19 +179,54 @@ function Home({ progress }: { progress: Progress }) {
   );
 }
 
+/** Rough time-to-solve by difficulty. Always rendered with the word
+ *  "estimate" — it is a design guess, not measured from real solves. */
+function estMinutes(d: 1 | 2 | 3 | 4) {
+  return { 1: 3, 2: 5, 3: 8, 4: 12 }[d];
+}
+
 function ModuleView({ id, progress }: { id: string; progress: Progress }) {
   const mod = MODULES.find((m) => m.id === id);
   if (!mod) return <p className="loading">Module not found. <a href="#/app">Home</a></p>;
+  const done = mod.problems.filter((p) => progress[p.id] === "solved").length;
+  const total = mod.problems.length;
+  const next = mod.problems.find((p) => progress[p.id] !== "solved");
+  const minutes = mod.problems
+    .filter((p) => progress[p.id] !== "solved")
+    .reduce((n, p) => n + estMinutes(p.difficulty), 0);
   return (
     <>
-      <h1>{mod.title}</h1>
       <p className="sub"><a href="#/app">← all modules</a></p>
+      <div className="modhead">
+        <div>
+          <h1>{mod.title}</h1>
+          <p className="modhead-blurb">{mod.blurb}</p>
+          <div className="modhead-meta">
+            <span><b>{done}</b>/{total} solved</span>
+            {next && <span>~{minutes} min left (estimate)</span>}
+            <span>{mod.problems.filter((p) => p.interview).length} in interview mode</span>
+          </div>
+          <div className="progress-bar" style={{ maxWidth: 320, marginTop: 10 }}>
+            <i style={{ width: `${(done / total) * 100}%` }} />
+          </div>
+        </div>
+        <div className="modhead-go">
+          {next
+            ? <a className="btn primary" href={`#/p/${next.id}`}>
+                {done ? "Continue" : "Start"} →
+              </a>
+            : <span className="modhead-done">✓ Module mastered</span>}
+        </div>
+      </div>
       <div className="theory"><Markdown text={mod.theory} /></div>
       <div className="plist">
-        {mod.problems.map((p) => (
-          <div className="prow" key={p.id} onClick={() => (location.hash = `#/p/${p.id}`)}>
-            <span className="solved-mark">{progress[p.id] === "solved" ? "✓" : ""}</span>
+        {mod.problems.map((p, i) => (
+          <div className="prow" data-done={progress[p.id] === "solved"}
+               key={p.id} onClick={() => (location.hash = `#/p/${p.id}`)}>
+            <span className="solved-mark">{progress[p.id] === "solved" ? "✓" : i + 1}</span>
             <span className="t">{p.title}</span>
+            {p.interview && <span className="tag-int">interview</span>}
+            <span className="prow-min">~{estMinutes(p.difficulty)} min</span>
             <DiffBadge d={p.difficulty} />
           </div>
         ))}
@@ -227,12 +294,15 @@ function ExpectedOutput({ problem }: { problem: Problem }) {
 }
 
 function Workspace({
-  problem, onGraded, hideHelp, draftKey,
+  problem, onGraded, hideHelp, draftKey, mod,
 }: {
   problem: Problem;
   onGraded: (outcome: GradeOutcome) => void;
   hideHelp?: boolean;
   draftKey: string;
+  /** Module this problem belongs to, so a correct answer can show where you
+   *  are in it and what comes next. Absent in interview mode. */
+  mod?: Module;
 }) {
   const [code, setCode] = useState(() => sessionStorage.getItem(draftKey) ?? "");
   const [running, setRunning] = useState(false);
@@ -276,15 +346,11 @@ function Workspace({
         )}
         {!hideHelp && (
           <div className="reveal">
+            {/* The answer itself now lives next to Submit, so this is just the
+                nudge that comes before it. */}
             {!showHint
               ? <button className="btn ghost" onClick={() => setShowHint(true)}>Show hint</button>
               : <p className="prompt" style={{ marginTop: 8 }}>💡 {problem.hint}</p>}
-            {showHint && !showSolution && (
-              <button className="btn ghost" onClick={() => setShowSolution(true)}>
-                Reveal solution
-              </button>
-            )}
-            {showSolution && <pre>{problem.solution}</pre>}
           </div>
         )}
         {!hideHelp && <ExpectedOutput key={problem.id} problem={problem} />}
@@ -295,7 +361,10 @@ function Workspace({
           <CodeMirror
             value={code}
             height="260px"
-            extensions={[sqlLang({ dialect: PostgreSQL })]}
+            // Wrap long queries instead of scrolling sideways: SQL is read
+            // top-to-bottom and a hidden right-hand edge loses the clause
+            // that is usually wrong.
+            extensions={[sqlLang({ dialect: PostgreSQL }), EditorView.lineWrapping]}
             onChange={setCode}
             placeholder={"-- Write your query here, then Run to explore or Submit to grade"}
             basicSetup={{ autocompletion: true }}
@@ -307,13 +376,81 @@ function Workspace({
             <button className="btn primary" onClick={submit} disabled={running || !code.trim()}>
               {running ? "…" : "Submit"}
             </button>
+            {/* Learning mode only. Interview mode passes hideHelp and never
+                offers the answer — that is the whole point of the rehearsal. */}
+            {!hideHelp && !showSolution && (
+              <button className="btn ghost" onClick={() => setShowSolution(true)}>
+                Show answer
+              </button>
+            )}
             <span className="spacer" />
             {result && <span className="ms">{result.rows.length} row(s) · {result.elapsedMs}ms</span>}
           </div>
+          {!hideHelp && showSolution && (
+            <div className="answer">
+              <div className="answer-hd">
+                <span>Worked answer</span>
+                <button className="btn ghost" onClick={() => setShowSolution(false)}>Hide</button>
+              </div>
+              <pre>{problem.solution}</pre>
+              <p className="answer-note">
+                Reading it is not the same as writing it. Close this, clear the editor and
+                type it out yourself before moving on.
+              </p>
+            </div>
+          )}
         </div>
         {error && <div className="sql-error">{error}</div>}
         {outcome && !outcome.error && <VerdictBox verdict={outcome.verdict} />}
+        {outcome?.verdict.correct && mod && <SolvedPanel problem={problem} mod={mod} />}
         {result && <ResultTable result={result} />}
+      </div>
+    </div>
+  );
+}
+
+/**
+ * Shown after a correct answer. Solving something used to produce a verdict
+ * box and nothing else, so there was no sense of progress and no push onward.
+ * This closes the loop: what you just learned, where you are, what is next.
+ *
+ * Progress is read at render time rather than passed down, because the parent
+ * has already persisted this solve by the time the panel mounts.
+ */
+function SolvedPanel({ problem, mod }: { problem: Problem; mod: Module }) {
+  const progress = loadProgress();
+  const done = mod.problems.filter((p) => progress[p.id] === "solved").length;
+  const total = mod.problems.length;
+  const complete = done >= total;
+  const next = mod.problems.find((p) => progress[p.id] !== "solved" && p.id !== problem.id);
+  const nextModule = MODULES[MODULES.findIndex((m) => m.id === mod.id) + 1];
+
+  return (
+    <div className={`solved${complete ? " is-complete" : ""}`}>
+      <div className="solved-hd">
+        <span className="solved-tick">✓</span>
+        <b>{complete ? `${mod.title} mastered` : "Solved"}</b>
+        <span className="solved-count">{done}/{total} in this module</span>
+      </div>
+      <div className="solved-bar"><i style={{ width: `${(done / total) * 100}%` }} /></div>
+
+      {problem.takeaway && (
+        <p className="solved-take"><b>Takeaway.</b> {promptWithCode(problem.takeaway)}</p>
+      )}
+
+      <div className="solved-next">
+        {complete ? (
+          <>
+            <span>You have solved every problem in this module.</span>
+            {nextModule
+              ? <a className="btn primary" href={`#/m/${nextModule.id}`}>Next: {nextModule.title} →</a>
+              : <a className="btn primary" href="#/interview">Try timed interview mode →</a>}
+          </>
+        ) : next ? (
+          <a className="btn primary" href={`#/p/${next.id}`}>Next problem →</a>
+        ) : (
+          <a className="btn primary" href={`#/m/${mod.id}`}>Back to {mod.title} →</a>
+        )}
       </div>
     </div>
   );
@@ -344,11 +481,13 @@ function ProblemView({
         {next && <> · <a href={`#/p/${next.id}`}>next problem →</a></>}
       </p>
       <div className="tag-row">
-        {problem.company && <span className="pill-co">{problem.company}</span>}
+        {problem.interview && <span className="tag-int">interview mode</span>}
+        <span className="prow-min">~{estMinutes(problem.difficulty)} min (estimate)</span>
         {(problem.topics ?? []).map((tp) => <span key={tp} className="pill-topic">{tp}</span>)}
       </div>
       <Workspace
         problem={problem}
+        mod={mod}
         draftKey={`draft-${id}`}
         onGraded={(o) => onResult(id, o.verdict.correct ? "solved" : "attempted")}
       />
@@ -399,7 +538,7 @@ function BankView({ progress }: { progress: Progress }) {
           <div className="prow" key={p.id} onClick={() => (location.hash = `#/p/${p.id}`)}>
             <span className="solved-mark">{progress[p.id] === "solved" ? "✓" : ""}</span>
             <span className="t">{p.title}</span>
-            {p.company && <span className="pill-co">{p.company}</span>}
+            {p.interview && <span className="tag-int">interview</span>}
             <span className="pill-mod">{m.title}</span>
             <DiffBadge d={p.difficulty} />
           </div>

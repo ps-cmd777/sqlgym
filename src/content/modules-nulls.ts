@@ -74,12 +74,16 @@ Use \`NOT EXISTS\`, or filter the NULLs out of the subquery.
       hint: "IS NULL, not = NULL.",
       solution: "SELECT username FROM users WHERE referred_by IS NULL ORDER BY username",
       orderSensitive: true,
+      takeaway:
+        "`= NULL` is never true, not even for a NULL. Comparison with an unknown yields unknown, and `WHERE` keeps only rows that are true. Use `IS NULL`.",
     },
     {
       id: "n2", title: "How many were referred", difficulty: 2, schema: "wavely",
       prompt: "Return one row with `total_users` (every user) and `referred_users` (users that have a `referred_by` value). Use the difference between counting rows and counting a column.",
       hint: "COUNT(*) counts rows; COUNT(col) skips NULLs.",
       solution: "SELECT COUNT(*) AS total_users, COUNT(referred_by) AS referred_users FROM users",
+      takeaway:
+        "`COUNT(*)` counts rows; `COUNT(col)` counts non-NULL values in that column. The gap between the two numbers is exactly how many are missing.",
     },
     {
       id: "n3", title: "The NOT IN trap", difficulty: 4, schema: "wavely",
@@ -88,6 +92,8 @@ Use \`NOT EXISTS\`, or filter the NULLs out of the subquery.
       solution:
         "SELECT u.username FROM users u WHERE NOT EXISTS (SELECT 1 FROM users r WHERE r.referred_by = u.user_id) ORDER BY u.username",
       orderSensitive: true, interview: true,
+      takeaway:
+        "`NOT IN` against a list containing a NULL returns no rows, ever. The database cannot prove your value differs from an unknown. Reach for `NOT EXISTS` instead, which is why interviewers ask this.",
     },
     {
       id: "n4", title: "Show a referrer or 'organic'", difficulty: 2, schema: "wavely",
@@ -96,6 +102,8 @@ Use \`NOT EXISTS\`, or filter the NULLs out of the subquery.
       solution:
         "SELECT username, COALESCE(referred_by::text, 'organic') AS source FROM users ORDER BY username",
       orderSensitive: true,
+      takeaway:
+        "`COALESCE` returns the first argument that is not NULL. It is how you replace missing values at display time without pretending they were never missing in the data.",
     },
     {
       id: "n5", title: "Refund rate without dividing by zero", difficulty: 3, schema: "brightmart",
@@ -110,6 +118,8 @@ LEFT JOIN refunds r ON r.order_id = oi.order_id
 GROUP BY p.category
 ORDER BY p.category`,
       orderSensitive: true, interview: true,
+      takeaway:
+        "`NULLIF(x, 0)` turns a zero denominator into NULL, and dividing by NULL gives NULL rather than an error. It is the standard way to make a rate safe.",
     },
     {
       id: "n6", title: "Compare values where NULL counts as a value", difficulty: 3, schema: "wavely",
@@ -119,6 +129,8 @@ ORDER BY p.category`,
       solution:
         "SELECT user_id, username FROM users WHERE referred_by IS DISTINCT FROM 1 ORDER BY user_id",
       orderSensitive: true,
+      takeaway:
+        "`IS DISTINCT FROM` compares two values treating NULL as an ordinary value, so NULL vs NULL is 'same' and NULL vs 5 is 'different'. Plain `<>` gives unknown for both.",
     },
     {
       id: "n7", title: "Sort with the unknowns at the bottom", difficulty: 2, schema: "wavely",
@@ -128,6 +140,8 @@ ORDER BY p.category`,
       solution:
         "SELECT username, referred_by FROM users ORDER BY referred_by DESC NULLS LAST, username",
       orderSensitive: true,
+      takeaway:
+        "Postgres sorts NULLs last ascending and first descending. If where they land matters, say so explicitly with `NULLS LAST`, rather than relying on the default.",
     },
     {
       id: "n8", title: "Average that ignores the blanks", difficulty: 3, schema: "wavely",
@@ -138,6 +152,8 @@ ORDER BY p.category`,
        ROUND(AVG(monthly_price), 2) AS avg_price_all,
        COUNT(cancelled_on) AS cancelled_count
 FROM subscriptions`,
+      takeaway:
+        "Aggregates skip NULLs, so `AVG(col)` divides by the count of non-NULL values, not by the row count. That is usually what you want, but it is worth knowing you got it.",
     },
   ],
 };

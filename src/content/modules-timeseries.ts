@@ -72,6 +72,8 @@ Read it as a for-each loop: for every genre, run this little query.
   problems: [
     {
       id: "ts1", title: "A row for every day in March", difficulty: 3, schema: "wavely",
+      takeaway:
+        "A date spine from `generate_series` plus a `LEFT JOIN` is how days with no activity still appear. Group your data alone and quiet days vanish, and any chart drawn from it lies.",
       prompt:
         "Return `day` and `plays` for every calendar day from 2025-03-01 to 2025-03-31, including days with no plays at all (those must show 0). Order by `day`.",
       hint: "generate_series for the spine, LEFT JOIN plays onto it, COUNT the play id.",
@@ -84,6 +86,8 @@ ORDER BY day`,
     },
     {
       id: "ts2", title: "Days a user went quiet", difficulty: 4, schema: "wavely",
+      takeaway:
+        "Put the extra condition in the `ON` clause, not `WHERE`. In `WHERE` it runs after the join and throws away the very non-matching rows you were trying to find.",
       prompt:
         "For user 1, return `day` for every date between 2025-03-01 and 2025-03-31 on which they played nothing. Order by `day`.",
       hint: "Build the spine, LEFT JOIN that user's plays onto it, keep rows where the join found nothing.",
@@ -97,6 +101,8 @@ ORDER BY day`,
     },
     {
       id: "ts3", title: "Longest run of consecutive active days", difficulty: 4, schema: "wavely",
+      takeaway:
+        "Gaps and islands: subtract a row number from the date and the result is constant inside a run of consecutive days. Group by that constant and each group is one streak.",
       prompt:
         "Across all users combined, find the longest run of consecutive calendar days that had at least one play. Return `run_start`, `run_end` and `days` for that single longest run. If several tie, return the earliest.",
       hint: "Distinct days, then date minus row_number is constant inside a run.",
@@ -116,6 +122,8 @@ LIMIT 1`,
     },
     {
       id: "ts4", title: "Two longest tracks per genre", difficulty: 4, schema: "wavely",
+      takeaway:
+        "`LATERAL` lets a subquery in `FROM` see the current row, so it behaves like a for-each loop. It is the clean way to do top-N per group.",
       prompt:
         "For each `genre`, return the two longest tracks as `genre`, `title` and `duration_s`. Order by `genre`, then `duration_s` descending, then `title`.",
       hint: "CROSS JOIN LATERAL a small ordered subquery with LIMIT 2.",
@@ -132,6 +140,8 @@ ORDER BY g.genre, x.duration_s DESC, x.title`,
     },
     {
       id: "ts5", title: "Days between a user's plays", difficulty: 3, schema: "wavely",
+      takeaway:
+        "`LAG` reads the previous row in the window, so 'time since last event' becomes plain subtraction. The first row has no previous row, so it is NULL by design.",
       prompt:
         "For user 1, return each `played_on` date they listened (distinct days) and `days_since_previous`, the number of days since their previous listening day. The first row must show NULL. Order by `played_on`.",
       hint: "LAG over the ordered distinct days, then subtract.",
@@ -144,6 +154,8 @@ ORDER BY played_on`,
     },
     {
       id: "ts6", title: "Weekly play counts", difficulty: 3, schema: "wavely",
+      takeaway:
+        "`date_trunc('week', d)` snaps every date back to its Monday, which is what makes weekly grouping work without a calendar table.",
       prompt:
         "Return `week_start` (the Monday of each week, as a date) and `plays` counting plays in that week. Include only weeks that had plays. Order by `week_start`.",
       hint: "date_trunc('week', played_on) gives the Monday.",
@@ -155,6 +167,8 @@ ORDER BY week_start`,
     },
     {
       id: "ts7", title: "Revenue with a running total by day", difficulty: 4, schema: "brightmart",
+      takeaway:
+        "`SUM(x) OVER (ORDER BY day)` accumulates as it goes, giving a running total. Adding `ORDER BY` to a window is what turns it from a total into a progression.",
       prompt:
         "For completed orders, return `day` (the order date), `revenue` (sum of quantity times unit price that day, rounded to 2 decimals) and `running_total` (cumulative revenue up to and including that day, rounded to 2 decimals). Order by `day`.",
       hint: "Aggregate per day in a CTE, then SUM(...) OVER (ORDER BY day).",
@@ -174,6 +188,8 @@ ORDER BY day`,
     },
     {
       id: "ts8", title: "Each user's first and most recent listen", difficulty: 3, schema: "wavely",
+      takeaway:
+        "`COUNT(DISTINCT played_on)` counts active days, not plays. Someone with fifty plays on one day was active once.",
       prompt:
         "Return `user_id`, `first_play`, `last_play` and `active_days` (distinct days with a play) for every user who has listened at least once. Order by `user_id`.",
       hint: "MIN, MAX and COUNT(DISTINCT played_on) grouped by user.",

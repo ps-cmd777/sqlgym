@@ -19,6 +19,11 @@ export interface Problem {
   orderSensitive?: boolean;
   /** Eligible for timed interview mode. */
   interview?: boolean;
+  /** One sentence shown after a correct answer: the idea worth keeping, or the
+   *  mistake most people make here. Optional — written where the concept
+   *  genuinely trips people up, omitted where it would be filler. Supports
+   *  `backticks` for inline code. */
+  takeaway?: string;
   /** "query" (default): compare SELECT results. "dml": the learner writes
    *  INSERT/UPDATE/DELETE against a fresh database copy; grading compares
    *  the result of `checkSql` after their statements vs after the
@@ -28,9 +33,6 @@ export interface Problem {
   checkSql?: string;
   /** Auto-derived at load time from the solution SQL — do not hand-set. */
   topics?: string[];
-  /** Auto-assigned interview flavor tag ("FAANG-style", etc). Pattern-based,
-   *  never a real leaked question. */
-  company?: string;
 }
 
 export type Track = "core" | "interview" | "advanced";

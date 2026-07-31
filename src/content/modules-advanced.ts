@@ -48,6 +48,8 @@ GROUP BY d ORDER BY day;
   problems: [
     {
       id: "p1", title: "Each user's first subscription", difficulty: 3, schema: "wavely",
+      takeaway:
+        "'First per group' and 'latest per group' are the same query with the sort reversed. Recognising that halves how many patterns you have to remember.",
       prompt: "Some users have multiple subscriptions. Return each subscriber's `user_id` and the `plan` of their EARLIEST subscription (lowest started_on; ties by lower sub_id).",
       hint: "ROW_NUMBER PARTITION BY user_id ORDER BY started_on, sub_id → rn = 1.",
       solution: `SELECT user_id, plan FROM (
@@ -58,6 +60,8 @@ GROUP BY d ORDER BY day;
     },
     {
       id: "p2", title: "Longest listening streak", difficulty: 4, schema: "wavely",
+      takeaway:
+        "Streaks are gaps and islands: date minus row number is constant within a run. This shape appears in almost every senior SQL screen.",
       prompt: "A streak is consecutive calendar days a user played at least one track. Return `user_id` and `longest_streak` (in days) for users whose longest streak is 3+ days, longest first, ties by user_id.",
       hint: "DISTINCT dates → island = played_on - ROW_NUMBER()::int → count per island → MAX per user.",
       solution: `WITH d AS (SELECT DISTINCT user_id, played_on FROM plays),
@@ -76,6 +80,8 @@ ORDER BY longest_streak DESC, user_id`,
     },
     {
       id: "p3", title: "Plan mix by country", difficulty: 3, schema: "wavely",
+      takeaway:
+        "Conditional aggregation with `FILTER` turns categories into columns without leaving SQL.",
       prompt: "One row per country that has subscriptions: `country`, `plus_subs`, `premium_subs` (count of subscriptions by plan, counting every subscription row). Alphabetical by country.",
       hint: "Join users; COUNT(*) FILTER (WHERE plan = 'plus') — or SUM(CASE …).",
       solution: `SELECT u.country,
@@ -87,6 +93,8 @@ GROUP BY u.country ORDER BY u.country`,
     },
     {
       id: "p4", title: "Daily orders including zero-order days", difficulty: 4, schema: "brightmart",
+      takeaway:
+        "Generate the days, then `LEFT JOIN`. Any 'including days with none' requirement is telling you a spine is needed.",
       prompt: "For every calendar day in March 2025 (all 31), return `day` and `n_orders` (orders placed that day, any status — 0 where none). Ordered by day.",
       hint: "generate_series('2025-03-01','2025-03-31','1 day') LEFT JOIN orders; COUNT(order_id).",
       solution: `SELECT gs::date AS day, COUNT(o.order_id) AS n_orders
@@ -97,6 +105,8 @@ GROUP BY gs::date ORDER BY day`,
     },
     {
       id: "p5", title: "Covered vs lapsed subscribers", difficulty: 4, schema: "wavely",
+      takeaway:
+        "Overlapping date ranges compare as `start <= period_end AND (end IS NULL OR end >= period_start)`. The NULL branch is the open-ended case people forget.",
       prompt: "Call a user 'currently covered' if they have any subscription with cancelled_on IS NULL. Return `covered` (count of covered users) and `lapsed` (users who have subscriptions but all cancelled). One row.",
       hint: "Per-user BOOL_OR(cancelled_on IS NULL) in a CTE; count both groups with FILTER.",
       solution: `WITH per_user AS (
@@ -110,6 +120,8 @@ FROM per_user`,
     },
     {
       id: "p6", title: "Top artist per genre (with ties)", difficulty: 4, schema: "wavely",
+      takeaway:
+        "When ties must all be kept, `RANK` is right and `ROW_NUMBER` is wrong. Ask what should happen on a tie before you pick.",
       prompt: "By total plays, find the top artist in each genre. If artists tie for the top, include all. Return `genre`, `artist`, `plays`, ordered by genre then artist.",
       hint: "Aggregate plays per (genre, artist); RANK per genre; keep rank 1.",
       solution: `WITH pa AS (
@@ -172,6 +184,8 @@ FROM per_user GROUP BY 1;
   problems: [
     {
       id: "a1", title: "Day-7 return rate", difficulty: 4, schema: "wavely",
+      takeaway:
+        "Retention is a self-join on the same table offset by a time window, then a count over a count. Define the denominator out loud before you write it.",
       prompt: "Of all users, what share played any track 7 or more days after their signup_date? Return `return_rate` = ROUND(returners::numeric / all_users, 3). One row.",
       hint: "EXISTS with played_on >= signup_date + 7; count with FILTER or AVG of CASE.",
       solution: `SELECT ROUND(
@@ -183,6 +197,8 @@ FROM users u`,
     },
     {
       id: "a2", title: "Monthly signup cohort sizes", difficulty: 3, schema: "wavely",
+      takeaway:
+        "A cohort is just a group keyed by the period someone joined. `date_trunc` on the signup date is the whole trick.",
       prompt: "Return `cohort_month` (first day of signup month, date) and `n_users`, ordered by month.",
       hint: "date_trunc('month', signup_date)::date.",
       solution: `SELECT date_trunc('month', signup_date)::date AS cohort_month, COUNT(*) AS n_users
@@ -191,6 +207,8 @@ FROM users GROUP BY 1 ORDER BY cohort_month`,
     },
     {
       id: "a3", title: "Signup-to-subscription funnel", difficulty: 4, schema: "wavely",
+      takeaway:
+        "Funnels are counts of progressively narrower sets, best written as CTEs so each stage can be checked on its own.",
       prompt: "One row, three columns: `all_users`, `ever_played` (users with ≥1 play), `ever_subscribed` (users with ≥1 subscription AND ≥1 play — subscribers who also listened).",
       hint: "COUNT(*) FILTER over EXISTS flags — build the flags in a CTE if it helps.",
       solution: `WITH flags AS (
@@ -207,6 +225,8 @@ FROM flags`,
     },
     {
       id: "a4", title: "Repeat-purchase rate by country", difficulty: 4, schema: "brightmart",
+      takeaway:
+        "Repeat rate is customers with more than one order over customers with any order. Both halves need the same filters or the ratio is meaningless.",
       prompt: "Per country: `country`, `customers` (with ≥1 completed order), `repeaters` (with ≥2), and `repeat_rate` (ROUND(repeaters::numeric/customers, 2)). Only countries with at least 3 ordering customers. Order by repeat_rate DESC, country.",
       hint: "Per-customer completed-order counts in a CTE, then aggregate per country.",
       solution: `WITH per_customer AS (
@@ -223,6 +243,8 @@ ORDER BY repeat_rate DESC, country`,
     },
     {
       id: "a5", title: "Monthly recurring revenue snapshot", difficulty: 4, schema: "wavely",
+      takeaway:
+        "MRR at a point in time means 'active on that date', which is a range overlap, not an equality.",
       prompt: "Monthly recurring revenue on 2025-12-31: sum of monthly_price over subscriptions active that day (started_on <= date, and cancelled_on is NULL or > date). Return `mrr` (2 decimals). One row.",
       hint: "Careful with the NULL branch of cancelled_on — that's the whole exercise.",
       solution: `SELECT ROUND(SUM(monthly_price)::numeric, 2) AS mrr
@@ -233,6 +255,8 @@ WHERE started_on <= '2025-12-31'
     },
     {
       id: "a6", title: "Segment users: power, regular, casual", difficulty: 4, schema: "wavely",
+      takeaway:
+        "`CASE` inside an aggregate query is how you segment. Put the thresholds in a CTE so a reader can find and change them.",
       prompt: "Classify users with ≥1 play: 'power' (≥30 plays), 'regular' (10–29), 'casual' (<10). Return `segment` and `n_users`, ordered power → regular → casual.",
       hint: "Per-user counts, CASE to segment, then GROUP BY segment; order with a CASE key.",
       solution: `WITH per_user AS (SELECT user_id, COUNT(*) AS n FROM plays GROUP BY user_id),
@@ -262,6 +286,8 @@ Use timed mode on this module: 5 problems, 40 minutes, no hints — the honest r
   problems: [
     {
       id: "i1", title: "Top customer per country", difficulty: 4, schema: "brightmart",
+      takeaway:
+        "Top per group with `ROW_NUMBER` and an outer filter. Window functions cannot appear in `WHERE`, so the filter always needs a CTE or subquery.",
       prompt: "For each country, the customer with the highest completed-order spend (quantity × unit_price). Return `country`, `name`, `spend` (2 dp). Break spend ties by customer_id ascending. Order by country.",
       hint: "Spend CTE → ROW_NUMBER per country → rn = 1.",
       solution: `WITH spend AS (
@@ -279,6 +305,8 @@ SELECT country, name, ROUND(s::numeric, 2) AS spend FROM (
     },
     {
       id: "i2", title: "Net revenue after refunds", difficulty: 4, schema: "brightmart",
+      takeaway:
+        "Net revenue means aggregating refunds separately then subtracting. Joining both children at once multiplies rows and inflates the answer.",
       prompt: "Per month: `month` (date), `gross` (completed item revenue), `refunds` (refund amounts by refund month), `net` = gross − refunds. All 2 dp; months that appear in either series; NULL-safe (a month may have refunds but no sales). Order by month.",
       hint: "Two monthly CTEs, FULL OUTER JOIN on month, COALESCE everything.",
       solution: `WITH g AS (
@@ -300,6 +328,8 @@ ORDER BY month`,
     },
     {
       id: "i3", title: "Median track duration by genre", difficulty: 4, schema: "wavely",
+      takeaway:
+        "`PERCENTILE_CONT` works per group like any other aggregate, so a median by category is one `GROUP BY`.",
       prompt: "Per genre: `genre` and `median_duration_s` (continuous median of duration_s, 1 dp). Alphabetical by genre.",
       hint: "PERCENTILE_CONT(0.5) WITHIN GROUP (ORDER BY duration_s).",
       solution: `SELECT genre,
@@ -309,6 +339,8 @@ FROM tracks GROUP BY genre ORDER BY genre`,
     },
     {
       id: "i4", title: "Skip rate by genre", difficulty: 4, schema: "wavely",
+      takeaway:
+        "A rate is a filtered count over a total count. `COUNT(*) FILTER (WHERE ...)::numeric / COUNT(*)` keeps it in one pass, and the cast stops integer division from returning 0.",
       prompt: "Call a play a 'skip' if seconds_played < 30. Per genre with ≥20 plays: `genre`, `plays`, `skip_rate` (ROUND(skips::numeric/plays, 3)), highest skip_rate first, ties by genre.",
       hint: "Join tracks, aggregate with FILTER, HAVING on the count.",
       solution: `SELECT t.genre, COUNT(*) AS plays,
@@ -320,6 +352,8 @@ ORDER BY skip_rate DESC, t.genre`,
     },
     {
       id: "i5", title: "Subscribers active two months running", difficulty: 4, schema: "wavely",
+      takeaway:
+        "'Two months running' is a self-join on month offset by one, or `LAG` over an ordered month list. The window version reads better.",
       prompt: "Which users had a subscription active on BOTH 2025-06-15 and 2025-07-15 (same or different subscription rows)? Active = started_on <= day AND (cancelled_on IS NULL OR cancelled_on > day). Return `user_id`, ascending.",
       hint: "Two EXISTS conditions, or INTERSECT of two active-on-day queries.",
       solution: `SELECT DISTINCT user_id FROM subscriptions
@@ -332,6 +366,8 @@ ORDER BY user_id`,
     },
     {
       id: "i6", title: "The comeback artist", difficulty: 4, schema: "wavely",
+      takeaway:
+        "Comparing a period to the one before it is `LAG` plus a growth expression, guarded with `NULLIF` so a zero base does not error.",
       prompt: "Per artist, compare plays in 2025-H1 (Jan–Jun) vs 2025-H2 (Jul–Dec). Return artists with MORE H2 than H1 plays: `artist`, `h1_plays`, `h2_plays`, ordered by (h2 − h1) descending, then artist.",
       hint: "Conditional aggregation with FILTER on date ranges, HAVING h2 > h1.",
       solution: `WITH halves AS (

@@ -39,6 +39,8 @@ ON CONFLICT (product_id) DO UPDATE SET price = EXCLUDED.price;
   problems: [
     {
       id: "m1", title: "Add a new product", difficulty: 1, schema: "brightmart", kind: "dml",
+      takeaway:
+        "`INSERT` adds rows. Naming the columns explicitly means the statement keeps working when the table gains a column.",
       prompt: "Insert a new product: product_id 999, name 'Gift Card', category 'Office', price 25.00.",
       hint: "INSERT INTO products VALUES (…) — match the column order or name the columns.",
       solution: "INSERT INTO products (product_id, product_name, category, price) VALUES (999, 'Gift Card', 'Office', 25.00)",
@@ -46,6 +48,8 @@ ON CONFLICT (product_id) DO UPDATE SET price = EXCLUDED.price;
     },
     {
       id: "m2", title: "Raise cable prices by 10%", difficulty: 2, schema: "brightmart", kind: "dml",
+      takeaway:
+        "`UPDATE` without a `WHERE` rewrites every row in the table. Run the `SELECT` first and check the row count before you run the update.",
       prompt: "Raise the price of every product in the 'Cables' category by 10% (multiply by 1.10).",
       hint: "UPDATE products SET price = … WHERE category = 'Cables'.",
       solution: "UPDATE products SET price = price * 1.10 WHERE category = 'Cables'",
@@ -54,6 +58,8 @@ ON CONFLICT (product_id) DO UPDATE SET price = EXCLUDED.price;
     },
     {
       id: "m3", title: "Delete items from cancelled orders", difficulty: 3, schema: "brightmart", kind: "dml",
+      takeaway:
+        "`DELETE` with a subquery removes rows matched elsewhere. Same rule: run it as a `SELECT` first.",
       prompt: "Delete all order_items belonging to cancelled orders.",
       hint: "DELETE FROM order_items WHERE order_id IN (SELECT … WHERE status = 'cancelled').",
       solution: "DELETE FROM order_items WHERE order_id IN (SELECT order_id FROM orders WHERE status = 'cancelled')",
@@ -62,6 +68,8 @@ ON CONFLICT (product_id) DO UPDATE SET price = EXCLUDED.price;
     },
     {
       id: "m4", title: "Insert-or-update a product (upsert)", difficulty: 3, schema: "brightmart", kind: "dml",
+      takeaway:
+        "`INSERT ... ON CONFLICT DO UPDATE` is upsert. It needs a unique constraint to detect the conflict against, and without one it cannot work.",
       prompt: "Upsert product 1: if it exists, set its price to 49.99; if not, insert it as ('Product 1', 'Audio', 49.99). Use INSERT … ON CONFLICT.",
       hint: "INSERT … VALUES (1, 'Product 1', 'Audio', 49.99) ON CONFLICT (product_id) DO UPDATE SET price = EXCLUDED.price.",
       solution: "INSERT INTO products (product_id, product_name, category, price) VALUES (1, 'Product 1', 'Audio', 49.99) ON CONFLICT (product_id) DO UPDATE SET price = EXCLUDED.price",
@@ -70,6 +78,8 @@ ON CONFLICT (product_id) DO UPDATE SET price = EXCLUDED.price;
     },
     {
       id: "m5", title: "Move price between two products (transaction)", difficulty: 4, schema: "brightmart", kind: "dml",
+      takeaway:
+        "A transaction makes several statements one all-or-nothing unit. Money moving between two rows is the textbook case: both changes land, or neither does.",
       prompt: "In one transaction: decrease the price of product 2 by 5.00 and increase the price of product 3 by 5.00. Wrap both updates in BEGIN/COMMIT.",
       hint: "BEGIN; UPDATE …; UPDATE …; COMMIT;",
       solution: `BEGIN;
@@ -81,6 +91,8 @@ COMMIT;`,
     },
     {
       id: "m6", title: "Archive then purge cancelled orders", difficulty: 4, schema: "brightmart", kind: "dml",
+      takeaway:
+        "Copy before you delete, inside one transaction, so a failure halfway cannot leave the archive and the table disagreeing.",
       prompt: "Cancelled orders should be purged, but keep an audit: first create table cancelled_archive AS the full rows of cancelled orders, then delete those orders from orders.",
       hint: "CREATE TABLE cancelled_archive AS SELECT * FROM orders WHERE …; then DELETE.",
       solution: `CREATE TABLE cancelled_archive AS SELECT * FROM orders WHERE status = 'cancelled';
@@ -147,6 +159,8 @@ The top half runs once (Ana's reports). The bottom half runs again and again —
   problems: [
     {
       id: "h1", title: "Direct reports per manager", difficulty: 2, schema: "orbit",
+      takeaway:
+        "A self-join on `manager_id = employee_id` gives one level of hierarchy. For an unknown number of levels you need recursion.",
       prompt: "For each manager (anyone who appears as someone's manager_id), return `manager_name` and `direct_reports` (count). Most reports first, ties by name.",
       hint: "Self-join employees to itself on manager_id; group by the manager.",
       solution: `SELECT m.name AS manager_name, COUNT(*) AS direct_reports
@@ -156,6 +170,8 @@ GROUP BY m.name ORDER BY direct_reports DESC, manager_name`,
     },
     {
       id: "h2", title: "Everyone under a given manager", difficulty: 3, schema: "orbit",
+      takeaway:
+        "A recursive CTE has an anchor (where to start) and a recursive part (how to step), joined by `UNION ALL`. Get the anchor right and the rest follows.",
       prompt: "Using WITH RECURSIVE, return the `emp_id` and `name` of every employee in employee 2's subtree — direct and indirect reports (not employee 2 themself).",
       hint: "Anchor: manager_id = 2. Step: join employees to the CTE on manager_id = cte.emp_id.",
       solution: `WITH RECURSIVE reports AS (
@@ -168,6 +184,8 @@ SELECT emp_id, name FROM reports`,
     },
     {
       id: "h3", title: "Org depth per employee", difficulty: 3, schema: "orbit",
+      takeaway:
+        "Carry a depth counter through the recursion, adding one at each step. It costs nothing and answers 'how deep' for free.",
       prompt: "Return `emp_id`, `name`, and `level` for all employees, where the CEO is level 1, their reports level 2, and so on. Order by level, then emp_id.",
       hint: "Anchor on manager_id IS NULL with level 1; add 1 per step.",
       solution: `WITH RECURSIVE org AS (
@@ -180,6 +198,8 @@ SELECT emp_id, name, level FROM org ORDER BY level, emp_id`,
     },
     {
       id: "h4", title: "Management chain as a path", difficulty: 4, schema: "orbit",
+      takeaway:
+        "Accumulate a text path as you recurse to show the chain. The same trick detects cycles: stop if the next id already appears in the path.",
       prompt: "For employee 40, return one row with `chain`: the names from the CEO down to employee 40, joined by ' > ' (e.g. 'CEO Name > … > Employee 40 Name').",
       hint: "Recurse UP from employee 40 via manager_id, carrying a path; or down from the CEO. String position matters.",
       solution: `WITH RECURSIVE up AS (
@@ -193,6 +213,8 @@ SELECT chain FROM up WHERE manager_id IS NULL`,
     },
     {
       id: "h5", title: "Total salary under each VP", difficulty: 4, schema: "orbit",
+      takeaway:
+        "Recurse to collect the subtree, then aggregate over it. Doing both at once is where these queries usually go wrong.",
       prompt: "For each level-2 manager (direct reports of the CEO), return `manager_name` and `subtree_salary`: the sum of salaries of everyone in their subtree INCLUDING themselves. Largest first, ties by name.",
       hint: "Recursive CTE carrying the level-2 root's id down the tree, then GROUP BY root.",
       solution: `WITH RECURSIVE sub AS (
@@ -208,6 +230,8 @@ FROM sub GROUP BY root_name ORDER BY subtree_salary DESC, manager_name`,
     },
     {
       id: "h6", title: "Deepest reporting chain", difficulty: 4, schema: "orbit",
+      takeaway:
+        "`MAX(depth)` over the recursive result gives the longest chain. Always bound a recursive CTE in some way, or bad data can loop forever.",
       prompt: "Return one row, one column `max_depth`: the number of levels in the org (CEO = 1).",
       hint: "The level query from h3, then MAX.",
       solution: `WITH RECURSIVE org AS (
@@ -261,12 +285,16 @@ FROM employees;
   problems: [
     {
       id: "x1", title: "Employee badges (name and department)", difficulty: 1, schema: "orbit",
+      takeaway:
+        "`||` concatenates, and it returns NULL if either side is NULL, so guard with `COALESCE` when a column is optional.",
       prompt: "Return each employee's `emp_id` and `badge`: their name uppercased, followed by ' · ' and their dept (e.g. 'ANA PETROS · Engineering').",
       hint: "UPPER(name) || ' · ' || dept.",
       solution: "SELECT emp_id, UPPER(name) || ' · ' || dept AS badge FROM employees",
     },
     {
       id: "x2", title: "Plays by day of week", difficulty: 3, schema: "wavely",
+      takeaway:
+        "`EXTRACT(DOW FROM d)` gives 0 for Sunday through 6 for Saturday. Sorting by the name of a day sorts alphabetically, which is never what you want.",
       prompt: "Count plays by day of week: `dow` (0=Sunday … 6=Saturday, as a number) and `plays`, ordered by dow.",
       hint: "EXTRACT(DOW FROM played_on) — cast to int for clean output.",
       solution: `SELECT EXTRACT(DOW FROM played_on)::int AS dow, COUNT(*) AS plays
@@ -275,6 +303,8 @@ FROM plays GROUP BY 1 ORDER BY dow`,
     },
     {
       id: "x3", title: "Employees by tenure", difficulty: 3, schema: "orbit",
+      takeaway:
+        "`AGE` and date subtraction give intervals; `EXTRACT(YEAR FROM ...)` turns one into a number you can group by.",
       prompt: "Bucket employees by hire date: 'veteran' (hired before 2022-01-01), 'established' (2022-2023), 'recent' (2024-01-01 or later). Return `bucket` and `n`, ordered veteran → established → recent.",
       hint: "CASE on hired_on; order with a CASE key.",
       solution: `WITH b AS (
@@ -289,6 +319,8 @@ ORDER BY CASE bucket WHEN 'veteran' THEN 1 WHEN 'established' THEN 2 ELSE 3 END`
     },
     {
       id: "x4", title: "Category refund ratio (divide-by-zero safe)", difficulty: 3, schema: "brightmart",
+      takeaway:
+        "Guard every ratio with `NULLIF(denominator, 0)`. A category with no sales is exactly when a dashboard breaks.",
       prompt: "Per product category: `category`, `refund_ratio` = refunded completed orders ÷ completed orders containing the category — but categories with zero completed orders must show NULL, not error. Round to 3 decimals. Order by category.",
       hint: "COUNT(...) / NULLIF(COUNT(...), 0) — the denominator guard is the exercise.",
       solution: `WITH cat_orders AS (
@@ -304,6 +336,8 @@ FROM cat_orders GROUP BY category ORDER BY category`,
     },
     {
       id: "x5", title: "Monthly order counts with labels", difficulty: 2, schema: "brightmart",
+      takeaway:
+        "`to_char(d, 'YYYY-MM')` gives a label that sorts correctly as text, which most other date formats do not.",
       prompt: "Monthly order counts with human labels: `label` (TO_CHAR format 'YYYY-MM') and `n_orders`, ordered by label.",
       hint: "TO_CHAR(ordered_on, 'YYYY-MM'); group and order by it.",
       solution: `SELECT TO_CHAR(ordered_on, 'YYYY-MM') AS label, COUNT(*) AS n_orders
@@ -312,6 +346,8 @@ FROM orders GROUP BY 1 ORDER BY label`,
     },
     {
       id: "x6", title: "Department rosters as one list", difficulty: 4, schema: "orbit",
+      takeaway:
+        "`STRING_AGG` with `ORDER BY` inside the aggregate gives a stable, readable list per group.",
       prompt: "Per dept: `dept` and `roster` — employee names joined by ', ' in alphabetical order. Order by dept.",
       hint: "STRING_AGG(name, ', ' ORDER BY name).",
       solution: `SELECT dept, STRING_AGG(name, ', ' ORDER BY name) AS roster

@@ -54,6 +54,8 @@ FROM tracks GROUP BY genre;
   problems: [
     {
       id: "pv1", title: "Plan mix as columns", difficulty: 3, schema: "wavely",
+      takeaway:
+        "Pivoting in SQL means one aggregate per output column, each with its own `FILTER`. You have to know the columns in advance, which is why truly dynamic pivots belong in the reporting layer.",
       prompt:
         "Return one row per `country` with columns `free`, `plus` and `premium` counting subscriptions on each plan for users in that country. Order by `country`.",
       hint: "COUNT(*) FILTER (WHERE plan = ...) once per column.",
@@ -69,6 +71,8 @@ ORDER BY u.country`,
     },
     {
       id: "pv2", title: "Order status as columns", difficulty: 3, schema: "brightmart",
+      takeaway:
+        "One `COUNT(*) FILTER` per status turns rows into columns in a single pass, no self-joins and no UNION.",
       prompt:
         "Return one row per `country` (of the customer) with `completed` and `cancelled` counting orders in each status. Order by `country`.",
       hint: "Join orders to customers, then one FILTER per status.",
@@ -83,6 +87,8 @@ ORDER BY c.country`,
     },
     {
       id: "pv3", title: "Genres as one list per artist", difficulty: 3, schema: "wavely",
+      takeaway:
+        "`STRING_AGG(x, ', ' ORDER BY x)` collapses a group into one ordered list. Without the `ORDER BY` inside, the order is arbitrary and will change between runs.",
       prompt:
         "For each `artist`, return `artist` and `genres`: their distinct genres joined into one comma-and-space separated string, alphabetically. Order by `artist`.",
       hint: "STRING_AGG(DISTINCT genre, ', ' ORDER BY genre).",
@@ -94,6 +100,8 @@ ORDER BY artist`,
     },
     {
       id: "pv4", title: "Products per category as an array", difficulty: 3, schema: "brightmart",
+      takeaway:
+        "`ARRAY_AGG` keeps the values as a real array rather than flattening to text, so downstream code can index it instead of parsing a string.",
       prompt:
         "For each `category`, return `category`, `products` (an array of product names sorted alphabetically) and `n` (how many). Order by `category`.",
       hint: "ARRAY_AGG(product_name ORDER BY product_name).",
@@ -107,6 +115,8 @@ ORDER BY category`,
     },
     {
       id: "pv5", title: "Unfold a wide row into metrics", difficulty: 4, schema: "brightmart",
+      takeaway:
+        "Unpivot is the reverse: a `VALUES` list or `UNNEST` turns one wide row into several tall ones. Tall data is usually easier to chart and to aggregate.",
       prompt:
         "For products priced above 100, return one row per product per metric: `product_id`, `metric` and `value`, where metric is either `price` or `product_id`. Order by `product_id` then `metric`.",
       hint: "LATERAL (VALUES ('price', price), ('product_id', product_id::numeric)) AS v(metric, value).",
@@ -119,6 +129,8 @@ ORDER BY p.product_id, v.metric`,
     },
     {
       id: "pv6", title: "Monthly revenue across the year", difficulty: 4, schema: "brightmart",
+      takeaway:
+        "A month spine plus `LEFT JOIN` keeps months with no revenue in the output as zero. Without it the gap silently closes and the trend looks better than it was.",
       prompt:
         "Return `month` (the first day of each month) and `revenue` (rounded to 2 decimals) from completed orders, plus `share_pct`: that month's share of total revenue as a percentage rounded to 1 decimal. Order by `month`.",
       hint: "date_trunc for the month, then a window SUM over everything for the denominator.",
@@ -183,6 +195,8 @@ FROM tracks GROUP BY genre;
   problems: [
     {
       id: "tx1", title: "Products whose name ends in a digit", difficulty: 3, schema: "brightmart",
+      takeaway:
+        "`~` is the Postgres regular expression operator. `'[0-9]$'` anchors the match to the end of the string, which is what `$` means.",
       prompt: "Return `product_name` for products whose name ends with a digit, ordered by `product_name`.",
       hint: "The regex operator ~ with [0-9]$.",
       solution: "SELECT product_name FROM products WHERE product_name ~ '[0-9]$' ORDER BY product_name",
@@ -190,6 +204,8 @@ FROM tracks GROUP BY genre;
     },
     {
       id: "tx2", title: "Case-insensitive search", difficulty: 2, schema: "wavely",
+      takeaway:
+        "`~*` is the case-insensitive form. Compare with `ILIKE` for simple patterns; reach for regex only when the pattern genuinely needs it.",
       prompt: "Return `title` and `artist` for tracks whose artist name contains the letters `the`, ignoring case. Order by `artist` then `title`.",
       hint: "ILIKE with % on both sides.",
       solution:
@@ -198,6 +214,8 @@ FROM tracks GROUP BY genre;
     },
     {
       id: "tx3", title: "Take the number out of a username", difficulty: 3, schema: "wavely",
+      takeaway:
+        "`SPLIT_PART(s, delim, n)` grabs the nth piece of a delimited string, which beats nesting `SUBSTRING` inside `POSITION`.",
       prompt:
         "Usernames look like `user_12`. Return `username` and `user_number` (the digits after the underscore, as an integer) for the first 10 users by `user_id`. Order by `user_id`.",
       hint: "SPLIT_PART(username, '_', 2) then cast to int.",
@@ -209,6 +227,8 @@ LIMIT 10`,
     },
     {
       id: "tx4", title: "Group artists by first letter", difficulty: 3, schema: "wavely",
+      takeaway:
+        "`LEFT(s, 1)` takes the first character. Grouping by a derived expression works exactly like grouping by a column, and you can reuse the expression in `GROUP BY`.",
       prompt:
         "Return `initial` (the uppercase first letter of the artist name) and `artists` (how many distinct artists start with it). Order by `initial`.",
       hint: "UPPER(LEFT(artist, 1)) and COUNT(DISTINCT artist).",
@@ -220,6 +240,8 @@ ORDER BY initial`,
     },
     {
       id: "tx5", title: "Build a JSON object per track", difficulty: 3, schema: "wavely",
+      takeaway:
+        "`JSON_BUILD_OBJECT` takes alternating keys and values, so the argument count is always even. It is how you shape an API response in the query.",
       prompt:
         "Return `track_id` and `payload`, a JSON object with keys `title` and `genre` for that track, for the first 5 tracks by `track_id`. Order by `track_id`.",
       hint: "JSON_BUILD_OBJECT('title', title, 'genre', genre).",
@@ -231,6 +253,8 @@ LIMIT 5`,
     },
     {
       id: "tx6", title: "One JSON array per genre", difficulty: 4, schema: "wavely",
+      takeaway:
+        "`JSON_AGG` collapses a group into one JSON array, which pairs naturally with `GROUP BY` to build nested documents in a single round trip.",
       prompt:
         "For each `genre`, return `genre` and `tracks`, a JSON array of objects each holding `title` and `duration_s`, ordered by title inside the array. Order the result by `genre`.",
       hint: "JSON_AGG(JSON_BUILD_OBJECT(...) ORDER BY title).",
@@ -243,6 +267,8 @@ ORDER BY genre`,
     },
     {
       id: "tx7", title: "Label products by name shape", difficulty: 3, schema: "brightmart",
+      takeaway:
+        "`CASE` returns the first branch that matches, so order the branches from most specific to most general or the general one swallows the rest.",
       prompt:
         "Return `product_name` and `name_kind`: `numbered` when the name ends in a digit, `plain` otherwise. Order by `name_kind` then `product_name`.",
       hint: "CASE WHEN product_name ~ '[0-9]$'.",
@@ -254,6 +280,8 @@ ORDER BY name_kind, product_name`,
     },
     {
       id: "tx8", title: "Safe concatenation with missing values", difficulty: 3, schema: "wavely",
+      takeaway:
+        "`||` returns NULL if any operand is NULL, which quietly blanks the whole string. `CONCAT` skips NULLs instead, and `COALESCE` lets you choose the placeholder.",
       prompt:
         "Return `username` and `label`: the username, then a space, then the referrer id in brackets when there is one, or just the username when there is not. Order by `username`. Do not let a missing referrer blank out the whole label.",
       hint: "CONCAT ignores NULL, unlike ||. Or use COALESCE around the bracketed part.",

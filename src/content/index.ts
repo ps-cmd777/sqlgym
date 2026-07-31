@@ -36,21 +36,13 @@ function deriveTopics(sql: string): string[] {
   return TOPIC_RULES.filter(([, re]) => re.test(sql)).map(([tag]) => tag).slice(0, 4);
 }
 
-// Pattern-flavored interview tag. NOT a real leaked question — a nod to the
-// company style each pattern shows up in. Deterministic by problem id.
-const COMPANY_STYLES = ["FAANG-style", "Amazon-style", "Meta-style", "Google-style", "Startup-style"];
-function companyFor(id: string): string {
-  let h = 0;
-  for (const c of id) h = (h * 31 + c.charCodeAt(0)) >>> 0;
-  return COMPANY_STYLES[h % COMPANY_STYLES.length];
-}
-
+// Previously each interview problem also got a "Meta-style" / "Google-style"
+// badge chosen by hashing its id. That is not information — the label and the
+// problem were unrelated — and an invented claim has no place in a product
+// whose pitch is that every claim is checkable. Topics below are derived from
+// the actual solution SQL, so they cannot drift or be made up.
 function tag(p: Problem): Problem {
-  return {
-    ...p,
-    topics: deriveTopics(p.solution),
-    company: p.interview ? companyFor(p.id) : undefined,
-  };
+  return { ...p, topics: deriveTopics(p.solution) };
 }
 
 export const MODULES: Module[] = withVariants([
