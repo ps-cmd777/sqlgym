@@ -3,6 +3,11 @@ import { analytics, interviewSet, patterns } from "./modules-advanced";
 import { foundations, joins, subqueries } from "./modules-core";
 import { expressions, hierarchy, mutations } from "./modules-extended";
 import { ctes, windows1, windows2 } from "./modules-windows";
+import { nulls } from "./modules-nulls";
+import { groupingAdvanced } from "./modules-grouping";
+import { timeseries } from "./modules-timeseries";
+import { dedup, stats } from "./modules-cleaning";
+import { pivots, textPatterns } from "./modules-shaping";
 import type { Module, Problem } from "./types";
 import { EXTRA } from "./extra-problems";
 import { withVariants } from "./variants";
@@ -49,8 +54,9 @@ function tag(p: Problem): Problem {
 }
 
 export const MODULES: Module[] = withVariants([
-  warmups, foundations, joins, subqueries, expressions, ctes, windows1, windows2,
-  patterns, hierarchy, mutations, analytics, interviewSet,
+  warmups, foundations, nulls, joins, subqueries, expressions, groupingAdvanced,
+  ctes, windows1, windows2, timeseries, patterns, dedup, hierarchy, mutations,
+  pivots, textPatterns, stats, analytics, interviewSet,
 ]).map((m) => ({
   ...m,
   problems: [...m.problems, ...(EXTRA[m.id] ?? [])].map(tag),

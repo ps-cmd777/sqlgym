@@ -2,6 +2,7 @@ import CodeMirror from "@uiw/react-codemirror";
 import { sql as sqlLang, PostgreSQL } from "@codemirror/lang-sql";
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { ALL_TOPICS, interviewDraw, MODULES, moduleOf, problemById } from "../content";
+import Landing from "./Landing";
 import type { Problem, Track } from "../content/types";
 import { TRACK_LABELS } from "../content/types";
 import { runQuery, warm, type QueryResult } from "../engine/engine";
@@ -12,6 +13,7 @@ import {
 } from "./bits";
 
 type Route =
+  | { view: "landing" }
   | { view: "home" }
   | { view: "module"; id: string }
   | { view: "problem"; id: string }
@@ -24,7 +26,8 @@ function parseHash(): Route {
   if (h.startsWith("#/p/")) return { view: "problem", id: h.slice(4) };
   if (h === "#/interview") return { view: "interview" };
   if (h === "#/bank") return { view: "bank" };
-  return { view: "home" };
+  if (h === "#/app" || h.startsWith("#/m/")) return { view: "home" };
+  return { view: "landing" };
 }
 
 export default function App() {
@@ -52,13 +55,17 @@ export default function App() {
     route.view === "problem" ? problemById.get(route.id)?.title :
     route.view === "interview" ? "Timed interview" : "";
 
+  // The landing page owns the full viewport: no app chrome above it.
+  if (route.view === "landing") return <Landing />;
+
   return (
     <>
       <nav className="top">
-        <a className="brand" href="#/">sql<em>gym</em></a>
+        <a className="brand" href="#/app">sql<em>gym</em></a>
         {crumb && <span className="crumb">/ {crumb}</span>}
         <span className="right">
           real Postgres in your browser · nothing leaves this machine
+          <a className="btn" href="#/">Home</a>
           <a className="btn" href="#/bank">All problems</a>
           <a className="btn" href="#/interview">⏱ Interview mode</a>
         </span>
@@ -142,11 +149,11 @@ function Home({ progress }: { progress: Progress }) {
 
 function ModuleView({ id, progress }: { id: string; progress: Progress }) {
   const mod = MODULES.find((m) => m.id === id);
-  if (!mod) return <p className="loading">Module not found. <a href="#/">Home</a></p>;
+  if (!mod) return <p className="loading">Module not found. <a href="#/app">Home</a></p>;
   return (
     <>
       <h1>{mod.title}</h1>
-      <p className="sub"><a href="#/">← all modules</a></p>
+      <p className="sub"><a href="#/app">← all modules</a></p>
       <div className="theory"><Markdown text={mod.theory} /></div>
       <div className="plist">
         {mod.problems.map((p) => (
@@ -325,7 +332,7 @@ function ProblemView({
 }: { id: string; onResult: (id: string, s: "solved" | "attempted") => void }) {
   const problem = problemById.get(id);
   const mod = moduleOf(id);
-  if (!problem || !mod) return <p className="loading">Problem not found. <a href="#/">Home</a></p>;
+  if (!problem || !mod) return <p className="loading">Problem not found. <a href="#/app">Home</a></p>;
   const idx = mod.problems.findIndex((p) => p.id === id);
   const next = mod.problems[idx + 1];
   return (
@@ -452,7 +459,7 @@ function InterviewView({
     return (
       <>
         <h1>Interview summary</h1>
-        <p className="sub"><a href="#/">← home</a></p>
+        <p className="sub"><a href="#/app">← home</a></p>
         <div className="summary-grid">
           <div className="cell"><b>{solvedIds.size}/5</b><span>solved</span></div>
           <div className="cell"><b>{mm}:{ss}</b><span>time left</span></div>

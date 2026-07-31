@@ -1,0 +1,473 @@
+/* ============================================================================
+   SQLGym landing page
+   ----------------------------------------------------------------------------
+   Design notes, so the intent survives future edits:
+
+   - Typography carries the page. Accent green appears four times total and
+     never decoratively (the discipline Linear and Impeccable both hold to).
+   - Display type uses aggressive negative tracking (-0.035em at 84px). Measured
+     against Linear (-3.0px @ 80px) and Figma (-1.72px @ 86px); this sits
+     between them. That single property does most of the "premium" work.
+   - The hero visual is a real DOM query card, not an image: crisp at any DPI,
+     animatable, and ~0 KB over the wire, which matters on a page whose pitch
+     is "no backend, instant".
+   - Motion is CSS + IntersectionObserver. Framer Motion would add ~35 KB to
+     sell a product that boasts about weighing nothing.
+   ========================================================================== */
+
+.lp {
+  /* ink ramp — warm graphite rather than pure black, so it sits on paper */
+  --lp-ink: #14140f;
+  --lp-ink-2: #3e3e36;
+  --lp-ink-3: #6b6a5f;
+  --lp-faint: #94938a;
+
+  /* paper */
+  --lp-paper: #fbfbf8;
+  --lp-paper-2: #f4f3ee;
+  --lp-card: #ffffff;
+
+  /* rules */
+  --lp-rule: rgba(20, 20, 15, 0.10);
+  --lp-rule-2: rgba(20, 20, 15, 0.06);
+
+  /* the one accent */
+  --lp-green: #12855c;
+  --lp-green-ink: #0b5c3f;
+  --lp-green-wash: rgba(18, 133, 92, 0.07);
+
+  --lp-sans: Inter, ui-sans-serif, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --lp-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+
+  --lp-shadow: 0 1px 2px rgba(20, 20, 15, .04), 0 8px 24px -12px rgba(20, 20, 15, .10);
+  --lp-shadow-lg: 0 2px 4px rgba(20, 20, 15, .03), 0 32px 64px -32px rgba(20, 20, 15, .22);
+
+  /* one spacing scale, used everywhere */
+  --s1: 4px; --s2: 8px; --s3: 12px; --s4: 16px; --s5: 24px;
+  --s6: 32px; --s7: 48px; --s8: 64px; --s9: 96px; --s10: 140px;
+
+  background: var(--lp-paper);
+  color: var(--lp-ink);
+  font-family: var(--lp-sans);
+  font-size: 17px;
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+  font-feature-settings: "cv11", "ss01", "calt";
+  min-height: 100vh;
+}
+
+@media (prefers-color-scheme: dark) {
+  .lp {
+    --lp-ink: #f4f3ee; --lp-ink-2: #c9c8bf; --lp-ink-3: #94938a; --lp-faint: #6b6a5f;
+    --lp-paper: #0c0c0a; --lp-paper-2: #131311; --lp-card: #161613;
+    --lp-rule: rgba(244, 243, 238, 0.12); --lp-rule-2: rgba(244, 243, 238, 0.06);
+    --lp-green: #34c191; --lp-green-ink: #4bd6a4; --lp-green-wash: rgba(52, 193, 145, 0.10);
+    --lp-shadow: 0 1px 2px rgba(0,0,0,.5);
+    --lp-shadow-lg: 0 32px 64px -32px rgba(0,0,0,.8);
+  }
+}
+
+.lp *, .lp *::before, .lp *::after { box-sizing: border-box; }
+.lp p { margin: 0; }
+
+/* --- shared shell ---------------------------------------------------------- */
+.lp-wrap { max-width: 1140px; margin: 0 auto; padding: 0 var(--s5); }
+.lp-narrow { max-width: 760px; }
+
+.lp section { position: relative; }
+.lp-sec { padding: var(--s10) 0; border-top: 1px solid var(--lp-rule-2); }
+.lp-sec:first-of-type { border-top: 0; }
+
+/* eyebrow: small caps mono label, the editorial signal */
+.lp-eyebrow {
+  font: 500 11.5px/1 var(--lp-mono);
+  letter-spacing: .16em; text-transform: uppercase;
+  color: var(--lp-faint); margin-bottom: var(--s4);
+  display: flex; align-items: center; gap: var(--s3);
+}
+.lp-eyebrow::after {
+  content: ""; height: 1px; flex: 1; background: var(--lp-rule-2);
+}
+
+.lp h2 {
+  font-size: clamp(30px, 4.2vw, 46px);
+  line-height: 1.08; letter-spacing: -.032em; font-weight: 620;
+  margin: 0 0 var(--s4); max-width: 20ch;
+}
+.lp h3 { font-size: 19px; font-weight: 600; letter-spacing: -.015em; margin: 0 0 var(--s2); }
+.lp-lede { font-size: 19px; color: var(--lp-ink-2); max-width: 58ch; }
+
+/* --- navigation ------------------------------------------------------------ */
+.lp-nav {
+  position: sticky; top: 0; z-index: 50;
+  background: color-mix(in srgb, var(--lp-paper) 82%, transparent);
+  backdrop-filter: saturate(180%) blur(14px);
+  border-bottom: 1px solid transparent;
+  transition: border-color .25s, background .25s;
+}
+.lp-nav[data-stuck="true"] { border-bottom-color: var(--lp-rule-2); }
+.lp-nav-in { display: flex; align-items: center; gap: var(--s6); height: 62px; }
+.lp-mark {
+  font: 620 17px/1 var(--lp-sans); letter-spacing: -.03em;
+  display: flex; align-items: center; gap: var(--s2); color: var(--lp-ink);
+  text-decoration: none;
+}
+.lp-mark i {
+  width: 7px; height: 7px; border-radius: 2px; background: var(--lp-green);
+  display: block; flex: none;
+}
+.lp-nav-links { display: flex; gap: var(--s5); margin-left: var(--s4); }
+.lp-nav-links a {
+  font-size: 14.5px; color: var(--lp-ink-3); text-decoration: none;
+  transition: color .18s;
+}
+.lp-nav-links a:hover { color: var(--lp-ink); }
+.lp-nav-cta { margin-left: auto; display: flex; align-items: center; gap: var(--s4); }
+
+/* --- buttons --------------------------------------------------------------- */
+.lp-btn {
+  display: inline-flex; align-items: center; gap: var(--s2);
+  font: 550 15px/1 var(--lp-sans); letter-spacing: -.01em;
+  padding: 12px 18px; border-radius: 9px; border: 1px solid transparent;
+  text-decoration: none; cursor: pointer; white-space: nowrap;
+  transition: transform .16s cubic-bezier(.2,.7,.3,1), box-shadow .16s, background .16s;
+}
+.lp-btn-primary {
+  background: var(--lp-ink); color: var(--lp-paper);
+  box-shadow: 0 1px 2px rgba(20,20,15,.16);
+}
+.lp-btn-primary:hover { transform: translateY(-1px); box-shadow: 0 4px 14px -4px rgba(20,20,15,.32); }
+.lp-btn-primary:active { transform: translateY(0); }
+.lp-btn-ghost { color: var(--lp-ink); border-color: var(--lp-rule); background: transparent; }
+.lp-btn-ghost:hover { background: var(--lp-paper-2); }
+.lp-btn-sm { padding: 9px 14px; font-size: 14px; border-radius: 8px; }
+.lp-btn .arw { transition: transform .18s cubic-bezier(.2,.7,.3,1); }
+.lp-btn:hover .arw { transform: translateX(3px); }
+
+/* --- hero ------------------------------------------------------------------ */
+.lp-hero { padding: var(--s10) 0 var(--s9); position: relative; overflow: hidden; }
+/* schema grid texture, extremely faint — the only "background art" on the page */
+.lp-hero::before {
+  content: ""; position: absolute; inset: -40% -10% auto -10%; height: 140%;
+  background-image:
+    linear-gradient(var(--lp-rule-2) 1px, transparent 1px),
+    linear-gradient(90deg, var(--lp-rule-2) 1px, transparent 1px);
+  background-size: 72px 72px;
+  mask-image: radial-gradient(ellipse 70% 60% at 62% 32%, #000 0%, transparent 72%);
+  pointer-events: none;
+}
+.lp-hero-grid {
+  position: relative; display: grid; gap: var(--s8);
+  grid-template-columns: minmax(0, 1.02fr) minmax(0, .98fr);
+  align-items: center;
+}
+.lp-h1 {
+  font-size: clamp(44px, 7.4vw, 84px);
+  line-height: .98; letter-spacing: -.038em; font-weight: 620;
+  margin: 0 0 var(--s5); max-width: 13ch;
+}
+.lp-h1 em {
+  font-style: normal; color: var(--lp-green);
+  font-family: var(--lp-mono); font-weight: 600;
+  font-size: .84em; letter-spacing: -.02em;
+}
+.lp-hero-sub { font-size: 19.5px; color: var(--lp-ink-2); max-width: 46ch; margin-bottom: var(--s6); }
+.lp-hero-cta { display: flex; gap: var(--s3); flex-wrap: wrap; align-items: center; }
+.lp-hero-note { font: 400 13.5px/1.5 var(--lp-mono); color: var(--lp-faint); margin-top: var(--s5); }
+
+/* --- the query card: the hero visual, a real DOM element -------------------- */
+.lp-card {
+  background: var(--lp-card); border: 1px solid var(--lp-rule);
+  border-radius: 14px; box-shadow: var(--lp-shadow-lg); overflow: hidden;
+}
+.lp-card-bar {
+  display: flex; align-items: center; gap: 7px;
+  padding: 11px 14px; border-bottom: 1px solid var(--lp-rule-2);
+  background: var(--lp-paper-2);
+}
+.lp-card-bar u { width: 9px; height: 9px; border-radius: 50%; background: var(--lp-rule); display: block; }
+.lp-card-bar span {
+  margin-left: var(--s2); font: 400 12px/1 var(--lp-mono); color: var(--lp-faint);
+}
+.lp-sql { padding: var(--s5) var(--s5) var(--s4); font: 450 13.5px/1.75 var(--lp-mono); overflow-x: auto; }
+.lp-sql .k { color: var(--lp-green); font-weight: 600; }
+.lp-sql .c { color: var(--lp-faint); }
+.lp-sql .s { color: var(--lp-ink-2); }
+.lp-run {
+  display: flex; align-items: center; gap: var(--s3);
+  padding: var(--s3) var(--s5); border-top: 1px solid var(--lp-rule-2);
+  border-bottom: 1px solid var(--lp-rule-2); background: var(--lp-paper-2);
+  font: 400 12px/1 var(--lp-mono); color: var(--lp-faint);
+}
+.lp-run b { color: var(--lp-green); font-weight: 600; }
+.lp-out { width: 100%; border-collapse: collapse; font: 400 13px/1 var(--lp-mono); }
+.lp-out th {
+  text-align: left; padding: 10px var(--s5); color: var(--lp-faint);
+  font-weight: 500; font-size: 11px; letter-spacing: .08em; text-transform: uppercase;
+  border-bottom: 1px solid var(--lp-rule-2);
+}
+.lp-out td { padding: 10px var(--s5); border-bottom: 1px solid var(--lp-rule-2); }
+.lp-out tr:last-child td { border-bottom: 0; }
+.lp-out tbody tr { opacity: 0; animation: lp-row .42s cubic-bezier(.2,.7,.3,1) forwards; }
+@keyframes lp-row { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: none; } }
+
+/* --- proof strip ----------------------------------------------------------- */
+.lp-proof { padding: var(--s6) 0; border-top: 1px solid var(--lp-rule-2); border-bottom: 1px solid var(--lp-rule-2); }
+.lp-proof-in { display: grid; grid-template-columns: repeat(4, 1fr); gap: var(--s5); }
+.lp-stat b {
+  display: block; font: 620 34px/1 var(--lp-sans); letter-spacing: -.035em;
+  font-variant-numeric: tabular-nums;
+}
+.lp-stat span { display: block; margin-top: 6px; font-size: 13.5px; color: var(--lp-ink-3); }
+
+/* --- generic cards --------------------------------------------------------- */
+.lp-grid { display: grid; gap: var(--s4); }
+.lp-g2 { grid-template-columns: repeat(2, 1fr); }
+.lp-g3 { grid-template-columns: repeat(3, 1fr); }
+.lp-tile {
+  background: var(--lp-card); border: 1px solid var(--lp-rule);
+  border-radius: 12px; padding: var(--s5); box-shadow: var(--lp-shadow);
+  transition: transform .2s cubic-bezier(.2,.7,.3,1), box-shadow .2s, border-color .2s;
+}
+.lp-tile:hover { transform: translateY(-2px); box-shadow: var(--lp-shadow-lg); border-color: var(--lp-rule); }
+.lp-tile p { color: var(--lp-ink-2); font-size: 15px; }
+.lp-tile .num {
+  font: 500 11.5px/1 var(--lp-mono); color: var(--lp-green);
+  letter-spacing: .1em; display: block; margin-bottom: var(--s3);
+}
+
+/* --- reveal on scroll ------------------------------------------------------ */
+.lp-rv { opacity: 0; transform: translateY(14px); transition: opacity .6s cubic-bezier(.2,.7,.3,1), transform .6s cubic-bezier(.2,.7,.3,1); }
+.lp-rv[data-in="true"] { opacity: 1; transform: none; }
+
+@media (prefers-reduced-motion: reduce) {
+  .lp *, .lp *::before, .lp *::after { animation: none !important; transition: none !important; }
+  .lp-rv { opacity: 1; transform: none; }
+  .lp-out tbody tr { opacity: 1; }
+}
+
+/* --- responsive ------------------------------------------------------------ */
+@media (max-width: 940px) {
+  .lp-hero-grid { grid-template-columns: 1fr; gap: var(--s7); }
+  .lp-h1 { max-width: 16ch; }
+  .lp-g3 { grid-template-columns: repeat(2, 1fr); }
+  .lp-proof-in { grid-template-columns: repeat(2, 1fr); gap: var(--s6) var(--s5); }
+  .lp-nav-links { display: none; }
+}
+@media (max-width: 620px) {
+  .lp { font-size: 16px; }
+  .lp-sec { padding: var(--s9) 0; }
+  .lp-hero { padding: var(--s8) 0 var(--s7); }
+  .lp-g2, .lp-g3 { grid-template-columns: 1fr; }
+  .lp-hero-cta { flex-direction: column; align-items: stretch; }
+  .lp-btn { justify-content: center; }
+}
+
+/* focus visibility, never removed */
+.lp a:focus-visible, .lp button:focus-visible {
+  outline: 2px solid var(--lp-green); outline-offset: 3px; border-radius: 6px;
+}
+
+/* ============================================================================
+   PASS 2 — structure from the product's own material
+   ----------------------------------------------------------------------------
+   V1 was tasteful but templated: symmetric hero, four-column stat strip, and
+   twenty identical tiles. The fixes below are structural rather than
+   decorative, and all derive from what SQLGym actually is: rows, columns and
+   relations.
+   ========================================================================== */
+
+/* --- numbered editorial rail ---------------------------------------------- */
+/* A schema-like spine down the page. Each section is numbered in the margin
+   with a hairline, so the eye has something to travel along. */
+.lp-rail { position: relative; padding-left: 84px; }
+.lp-rail::before {
+  content: attr(data-n);
+  position: absolute; left: 0; top: 4px;
+  font: 500 12px/1 var(--lp-mono); letter-spacing: .12em;
+  color: var(--lp-faint);
+}
+.lp-rail::after {
+  content: ""; position: absolute; left: 26px; top: 20px; bottom: 0; width: 1px;
+  background: linear-gradient(var(--lp-rule) 0%, transparent 92%);
+}
+@media (max-width: 860px) { .lp-rail { padding-left: 0; } .lp-rail::after { display: none; } }
+
+/* --- stats rendered as a query result, not a stat strip -------------------- */
+.lp-resulttable {
+  border: 1px solid var(--lp-rule); border-radius: 12px; overflow: hidden;
+  background: var(--lp-card); box-shadow: var(--lp-shadow);
+}
+.lp-resulttable .rt-head {
+  display: flex; align-items: center; gap: var(--s3);
+  padding: 10px var(--s5); border-bottom: 1px solid var(--lp-rule-2);
+  background: var(--lp-paper-2);
+  font: 400 12px/1 var(--lp-mono); color: var(--lp-faint);
+}
+.lp-resulttable table { width: 100%; border-collapse: collapse; }
+.lp-resulttable th {
+  text-align: left; padding: 9px var(--s5); font: 500 10.5px/1 var(--lp-mono);
+  letter-spacing: .1em; text-transform: uppercase; color: var(--lp-faint);
+  border-bottom: 1px solid var(--lp-rule-2);
+}
+.lp-resulttable td {
+  padding: 14px var(--s5); border-bottom: 1px solid var(--lp-rule-2);
+  font-size: 15px; color: var(--lp-ink-2);
+}
+.lp-resulttable tr:last-child td { border-bottom: 0; }
+.lp-resulttable td.n {
+  font: 620 26px/1 var(--lp-sans); letter-spacing: -.03em;
+  color: var(--lp-ink); font-variant-numeric: tabular-nums; width: 1%;
+  white-space: nowrap; padding-right: var(--s6);
+}
+
+/* --- asymmetric hero: card sits lower and bleeds past the container -------- */
+@media (min-width: 941px) {
+  .lp-hero-grid { align-items: start; grid-template-columns: minmax(0, 1.08fr) minmax(0, .92fr); }
+  .lp-hero-copy { padding-top: var(--s7); }
+  .lp-hero-vis { margin-right: calc(-1 * var(--s8)); margin-top: var(--s9); }
+  /* hairline "relation" from the copy to the card, like a schema edge */
+  .lp-hero-vis::before {
+    content: ""; position: absolute; left: -52px; top: 46%; width: 52px; height: 1px;
+    background: linear-gradient(90deg, transparent, var(--lp-rule));
+  }
+  .lp-hero-vis { position: relative; }
+}
+
+/* --- feature card: one big, several small -------------------------------- */
+.lp-feature {
+  grid-column: span 2; display: grid; gap: var(--s6);
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); align-items: center;
+  background: var(--lp-card); border: 1px solid var(--lp-rule);
+  border-radius: 14px; padding: var(--s7); box-shadow: var(--lp-shadow);
+}
+.lp-feature h3 { font-size: 24px; letter-spacing: -.025em; margin-bottom: var(--s3); }
+@media (max-width: 860px) { .lp-feature { grid-column: span 1; grid-template-columns: 1fr; padding: var(--s5); } }
+
+/* --- terminal-style verdict block ---------------------------------------- */
+.lp-term {
+  background: var(--lp-ink); color: var(--lp-paper);
+  border-radius: 12px; padding: var(--s5); font: 450 13px/1.85 var(--lp-mono);
+  box-shadow: var(--lp-shadow-lg); overflow-x: auto;
+}
+.lp-term .ok { color: #4bd6a4; }
+.lp-term .no { color: #ff9d8a; }
+.lp-term .dim { opacity: .55; }
+
+/* --- progress bars -------------------------------------------------------- */
+.lp-bars { display: grid; gap: var(--s4); }
+.lp-bar-row { display: grid; grid-template-columns: 168px 1fr 46px; gap: var(--s4); align-items: center; font-size: 14.5px; }
+.lp-bar { height: 6px; border-radius: 99px; background: var(--lp-rule-2); overflow: hidden; }
+.lp-bar i { display: block; height: 100%; border-radius: 99px; background: var(--lp-green); width: 0; transition: width 1.1s cubic-bezier(.2,.7,.3,1); }
+.lp-rv[data-in="true"] .lp-bar i { width: var(--w); }
+.lp-bar-row b { font: 500 13px/1 var(--lp-mono); color: var(--lp-faint); text-align: right; }
+@media (max-width: 620px) { .lp-bar-row { grid-template-columns: 1fr 40px; } .lp-bar { grid-column: 1 / -1; } }
+
+/* --- pull quote / editorial break ---------------------------------------- */
+.lp-pull {
+  font-size: clamp(24px, 3.4vw, 36px); line-height: 1.28; letter-spacing: -.028em;
+  font-weight: 500; max-width: 22ch; color: var(--lp-ink);
+}
+.lp-pull span { color: var(--lp-green); }
+
+/* stagger reveal children for a less uniform feel */
+.lp-rv[data-in="true"] > * { animation: lp-up .55s cubic-bezier(.2,.7,.3,1) backwards; }
+.lp-rv[data-in="true"] > *:nth-child(2) { animation-delay: .06s; }
+.lp-rv[data-in="true"] > *:nth-child(3) { animation-delay: .12s; }
+.lp-rv[data-in="true"] > *:nth-child(4) { animation-delay: .18s; }
+@keyframes lp-up { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
+@media (prefers-reduced-motion: reduce) { .lp-rv[data-in="true"] > * { animation: none; } }
+
+/* ============================================================================
+   PASS 3 — fill the measure, tighten the rhythm, stop repeating the tile
+   ----------------------------------------------------------------------------
+   V2 fixed the structure but left three tells: the right 40% of every section
+   was empty, section gaps were so large the page read as disconnected, and the
+   3-up tile grid still appeared three times. All three below.
+   ========================================================================== */
+
+/* Tighter vertical rhythm. 280px between sections read as unfinished rather
+   than confident; 200px still breathes but holds the page together. */
+.lp .lp-sec { padding: var(--s9) 0 var(--s10); }
+.lp-hero { padding-bottom: var(--s8); }
+
+/* Split section header: heading left, lede right. Uses the full measure and
+   gives every section the asymmetry the hero has. */
+.lp-head {
+  display: grid; gap: var(--s5) var(--s8); align-items: end;
+  grid-template-columns: minmax(0, 1.05fr) minmax(0, .95fr);
+  margin-bottom: var(--s7);
+}
+.lp-head h2 { margin-bottom: 0; }
+.lp-head .lp-lede { padding-bottom: 6px; }
+@media (max-width: 940px) { .lp-head { grid-template-columns: 1fr; } }
+
+/* The learning path is a list, not more cards — different material, and it
+   echoes the result-table motif that carries the rest of the page. */
+.lp-modlist { border-top: 1px solid var(--lp-rule-2); }
+.lp-modrow {
+  display: grid; grid-template-columns: 2.5ch minmax(0, 15rem) minmax(0, 1fr) auto;
+  gap: var(--s5); align-items: baseline;
+  padding: var(--s5) var(--s2); border-bottom: 1px solid var(--lp-rule-2);
+  text-decoration: none; color: inherit;
+  transition: background .18s, padding-left .18s;
+}
+.lp-modrow:hover { background: var(--lp-paper-2); padding-left: var(--s4); }
+.lp-modrow .ix { font: 500 12px/1 var(--lp-mono); color: var(--lp-faint); }
+.lp-modrow .ti { font-size: 17px; font-weight: 560; letter-spacing: -.015em; }
+.lp-modrow .bl { font-size: 15px; color: var(--lp-ink-3); }
+.lp-modrow .ct { font: 500 12px/1 var(--lp-mono); color: var(--lp-faint); white-space: nowrap; }
+@media (max-width: 860px) {
+  .lp-modrow { grid-template-columns: 2.5ch 1fr auto; }
+  .lp-modrow .bl { grid-column: 2 / -1; }
+}
+
+/* Small mono fact list — fills the right column of otherwise text-only
+   sections instead of leaving 40% of the grid empty. */
+.lp-facts { display: grid; gap: 0; align-self: start; }
+.lp-facts div {
+  display: flex; gap: var(--s4); align-items: baseline;
+  padding: 11px 0; border-bottom: 1px solid var(--lp-rule-2);
+  font-size: 15px; color: var(--lp-ink-2);
+}
+.lp-facts div:first-child { border-top: 1px solid var(--lp-rule-2); }
+.lp-facts b { font: 500 12px/1.5 var(--lp-mono); color: var(--lp-faint); flex: none; width: 8.5rem; }
+.lp-split {
+  display: grid; gap: var(--s8); grid-template-columns: minmax(0, 1.05fr) minmax(0, .95fr);
+  align-items: start;
+}
+@media (max-width: 940px) { .lp-split { grid-template-columns: 1fr; } }
+
+/* --- mobile fixes ---------------------------------------------------------
+   The hero column was sizing to the query card's longest SQL line (439px in a
+   390px viewport), pushing the whole hero past the edge. Grid columns need an
+   explicit minmax(0, …) floor, and the SQL block scrolls on its own. */
+@media (max-width: 940px) {
+  .lp-hero-grid { grid-template-columns: minmax(0, 1fr); }
+  .lp-hero-vis, .lp-card { min-width: 0; }
+  .lp-sql { overflow-x: auto; }
+  .lp-out { display: block; overflow-x: auto; white-space: nowrap; }
+  .lp-head, .lp-split, .lp-feature { grid-template-columns: minmax(0, 1fr); }
+}
+@media (max-width: 860px) {
+  /* title and count on one line, blurb beneath — the 3-column version left the
+     count at zero width. */
+  .lp-modrow { grid-template-columns: minmax(0, 1fr) auto; gap: var(--s2) var(--s4); }
+  .lp-modrow .ix { display: none; }
+  .lp-modrow .bl { grid-column: 1 / -1; }
+  .lp-facts b { width: 7rem; }
+}
+@media (max-width: 620px) {
+  .lp-nav-links { display: none; }
+  .lp-hero-cta .lp-btn { flex: 1 1 auto; justify-content: center; }
+}
+
+/* DOM order is index, title, blurb, count — so on mobile the count needs
+   explicit placement or it auto-flows onto a third row and its column
+   collapses to zero. */
+@media (max-width: 860px) {
+  .lp-modrow .ti { grid-row: 1; grid-column: 1; }
+  .lp-modrow .ct { grid-row: 1; grid-column: 2; }
+  .lp-modrow .bl { grid-row: 2; }
+}
+@media (max-width: 620px) { .lp-run b, .lp-run span { white-space: nowrap; } }

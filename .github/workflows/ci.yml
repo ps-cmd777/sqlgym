@@ -25,7 +25,7 @@ jobs:
       - name: Grader unit tests
         run: npm test
 
-      - name: Validate all 70 canonical solutions (both dataset variants)
+      - name: Validate all canonical solutions (both dataset variants)
         run: npm run validate
 
       - name: Production build
