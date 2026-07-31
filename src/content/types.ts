@@ -37,12 +37,52 @@ export interface Problem {
 
 export type Track = "core" | "interview" | "advanced";
 
+/**
+ * Curriculum stage. Tracks are a taxonomy ("what kind of thing is this");
+ * stages are a sequence ("where am I on the path"). The dashboard used to
+ * group by track, which shattered the authoring order — finishing module 10
+ * sent you to a module displayed four rows lower under a different heading.
+ * Stages are contiguous in MODULES order, so what the roadmap shows and what
+ * "Continue" walks are guaranteed to be the same path.
+ */
+export type Stage = "foundations" | "core" | "intermediate" | "advanced" | "interview";
+
+export const STAGE_ORDER: Stage[] = [
+  "foundations", "core", "intermediate", "advanced", "interview",
+];
+
+export const STAGES: Record<Stage, { label: string; blurb: string }> = {
+  foundations: {
+    label: "Foundations",
+    blurb: "Reading data out of one table, and counting it.",
+  },
+  core: {
+    label: "Core SQL",
+    blurb: "Missing values, more than one table, and queries inside queries.",
+  },
+  intermediate: {
+    label: "Intermediate",
+    blurb: "Naming intermediate results, and looking across rows without collapsing them.",
+  },
+  advanced: {
+    label: "Advanced",
+    blurb: "Time, hierarchy, reshaping and statistics — the work analysts actually ship.",
+  },
+  interview: {
+    label: "Interview ready",
+    blurb: "Mixed, hard, and under a clock.",
+  },
+};
+
 export interface Module {
   id: string;
   title: string;
   blurb: string;
-  /** Learning track this module belongs to (home groups modules by track). */
+  /** Learning track this module belongs to. Kept for filtering. */
   track?: Track;
+  /** Position on the curriculum path. Assigned in content/index.ts so the
+   *  sequence lives in one place and cannot drift from the array order. */
+  stage?: Stage;
   /** Markdown-lite: ## headings, **bold**, `inline`, ```sql blocks, - lists */
   theory: string;
   problems: Problem[];

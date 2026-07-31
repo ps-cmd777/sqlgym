@@ -1,0 +1,127 @@
+/* ============================================================================
+   SQLGym design tokens — the single source of truth.
+   ----------------------------------------------------------------------------
+   Before this file there were two design systems: the landing page had a warm
+   graphite/paper palette on Inter + JetBrains Mono, and the app had a separate
+   near-black palette on system-ui with a brighter green. Crossing from one to
+   the other read as crossing between two products.
+
+   Everything now derives from here. Rules:
+
+   - One ink ramp, one paper ramp, one accent. The accent is used for state
+     (solved, correct, active) and almost nothing else. Colour is not how this
+     interface communicates; type and space are.
+   - One spacing scale, 4px based. No ad-hoc pixel values in components.
+   - One radius scale and one shadow scale, both short on purpose.
+   - Dark mode is a token swap, never a separate stylesheet.
+   ========================================================================== */
+
+:root {
+  /* --- ink: warm graphite, never pure black ----------------------------- */
+  --ink:     #14140f;
+  --ink-2:   #3e3e36;
+  --ink-3:   #6b6a5f;
+  --ink-4:   #94938a;   /* faint: metadata, captions */
+
+  /* --- paper ------------------------------------------------------------ */
+  --paper:   #fbfbf8;   /* page */
+  --paper-2: #f4f3ee;   /* recessed: code blocks, table headers */
+  --surface: #ffffff;   /* raised: cards */
+
+  /* --- rules ------------------------------------------------------------ */
+  --rule:    rgba(20, 20, 15, 0.10);
+  --rule-2:  rgba(20, 20, 15, 0.06);
+
+  /* --- the one accent --------------------------------------------------- */
+  --accent:      #12855c;
+  --accent-ink:  #0b5c3f;
+  --accent-wash: rgba(18, 133, 92, 0.07);
+
+  /* --- state ------------------------------------------------------------ */
+  --bad:      #b4472f;
+  --bad-wash: rgba(180, 71, 47, 0.07);
+  --warn:     #8a6400;
+
+  /* --- type ------------------------------------------------------------- */
+  --sans: Inter, ui-sans-serif, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --mono: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+
+  /* --- spacing: 4px base ------------------------------------------------ */
+  --s1: 4px;  --s2: 8px;  --s3: 12px; --s4: 16px; --s5: 24px;
+  --s6: 32px; --s7: 48px; --s8: 64px; --s9: 96px; --s10: 140px;
+
+  /* --- radius: three steps, no more ------------------------------------- */
+  --r-sm: 8px;
+  --r-md: 12px;
+  --r-lg: 18px;
+
+  /* --- elevation: two steps --------------------------------------------- */
+  --shadow:    0 1px 2px rgba(20, 20, 15, .04), 0 8px 24px -12px rgba(20, 20, 15, .10);
+  --shadow-lg: 0 2px 4px rgba(20, 20, 15, .03), 0 32px 64px -32px rgba(20, 20, 15, .22);
+
+  /* --- motion: one curve, three durations ------------------------------- */
+  --ease: cubic-bezier(.2, .7, .3, 1);
+  --t-fast: .14s;
+  --t-mid:  .24s;
+  --t-slow: .5s;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --ink:     #f4f3ee;
+    --ink-2:   #c9c8bf;
+    --ink-3:   #94938a;
+    --ink-4:   #6b6a5f;
+
+    --paper:   #0c0c0a;
+    --paper-2: #131311;
+    --surface: #161613;
+
+    --rule:    rgba(244, 243, 238, 0.12);
+    --rule-2:  rgba(244, 243, 238, 0.06);
+
+    --accent:      #34c191;
+    --accent-ink:  #4bd6a4;
+    --accent-wash: rgba(52, 193, 145, 0.10);
+
+    --bad:      #ff9d8a;
+    --bad-wash: rgba(255, 157, 138, 0.10);
+    --warn:     #e8b33d;
+
+    --shadow:    0 1px 2px rgba(0, 0, 0, .5);
+    --shadow-lg: 0 32px 64px -32px rgba(0, 0, 0, .8);
+  }
+}
+
+/* --- type scale -------------------------------------------------------------
+   Display sizes carry aggressive negative tracking; that single property does
+   most of the work that reads as "designed" rather than "default". Measured
+   against Linear (-3.0px @ 80px) and Figma (-1.72px @ 86px).
+   ------------------------------------------------------------------------- */
+.t-display {
+  font-size: clamp(38px, 5.4vw, 60px); line-height: 1.02;
+  letter-spacing: -.038em; font-weight: 620;
+}
+.t-h1 { font-size: 30px; line-height: 1.12; letter-spacing: -.03em;  font-weight: 620; }
+.t-h2 { font-size: 21px; line-height: 1.2;  letter-spacing: -.022em; font-weight: 620; }
+.t-h3 { font-size: 16px; line-height: 1.3;  letter-spacing: -.014em; font-weight: 600; }
+.t-body  { font-size: 15px; line-height: 1.62; color: var(--ink-2); }
+.t-small { font-size: 13.5px; line-height: 1.55; color: var(--ink-3); }
+
+/* Eyebrow: small-caps mono label. The editorial signal used throughout. */
+.t-eyebrow {
+  font: 500 11px/1 var(--mono); letter-spacing: .16em;
+  text-transform: uppercase; color: var(--ink-4);
+}
+
+/* Numerals in any measurement context must not jitter as they change. */
+.tabular { font-variant-numeric: tabular-nums; }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: .01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: .01ms !important;
+    scroll-behavior: auto !important;
+  }
+}

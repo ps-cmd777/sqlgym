@@ -4,8 +4,8 @@ import { EditorView } from "@codemirror/view";
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { ALL_TOPICS, interviewDraw, MODULES, moduleOf, problemById } from "../content";
 import Landing from "./Landing";
-import type { Module, Problem, Track } from "../content/types";
-import { TRACK_LABELS } from "../content/types";
+import type { Module, Problem } from "../content/types";
+import { STAGE_ORDER, STAGES } from "../content/types";
 import { runQuery, warm, type QueryResult } from "../engine/engine";
 import { gradeProblem, type GradeOutcome } from "../grader/grader";
 import {
@@ -143,25 +143,39 @@ function Home({ progress }: { progress: Progress }) {
         <a href="#/bank">All problems →</a>
       </div>
 
-      {(["core", "interview", "advanced"] as Track[]).map((track) => {
-        const mods = MODULES.filter((m) => (m.track ?? "core") === track);
+      {STAGE_ORDER.map((stage, si) => {
+        const mods = MODULES.filter((m) => m.stage === stage);
         if (!mods.length) return null;
-        const tSolved = mods.reduce((n, m) => n + m.problems.filter((p) => progress[p.id] === "solved").length, 0);
-        const tTotal = mods.reduce((n, m) => n + m.problems.length, 0);
+        const sSolved = mods.reduce((n, m) => n + m.problems.filter((p) => progress[p.id] === "solved").length, 0);
+        const sTotal = mods.reduce((n, m) => n + m.problems.length, 0);
+        const complete = sSolved === sTotal;
+        const current = mods.some((m) => m.id === next?.mod.id);
         return (
-          <section key={track} className="track">
-            <h2 className="track-h">
-              {TRACK_LABELS[track]}
-              <span className="track-bar"><i style={{ width: `${(tSolved / tTotal) * 100}%` }} /></span>
-              <span className="track-count">{tSolved}/{tTotal}</span>
-            </h2>
+          <section key={stage} className="stage" data-state={complete ? "done" : current ? "current" : "ahead"}>
+            <div className="stage-head">
+              <span className="stage-n">{String(si + 1).padStart(2, "0")}</span>
+              <div>
+                <h2 className="stage-t">
+                  {STAGES[stage].label}
+                  {complete && <span className="stage-badge">mastered</span>}
+                  {current && !complete && <span className="stage-badge is-current">you are here</span>}
+                </h2>
+                <p className="stage-b">{STAGES[stage].blurb}</p>
+              </div>
+              <div className="stage-p">
+                <span className="progress-bar"><i style={{ width: `${(sSolved / sTotal) * 100}%` }} /></span>
+                <span className="stage-c">{sSolved}/{sTotal}</span>
+              </div>
+            </div>
             <div className="modlist">
               {mods.map((m) => {
                 const done = m.problems.filter((p) => progress[p.id] === "solved").length;
                 const mastered = done === m.problems.length;
+                const isNext = m.id === next?.mod.id;
                 return (
-                  <a className="modrow" data-done={mastered} href={`#/m/${m.id}`} key={m.id}>
-                    <span className="modrow-mark">{mastered ? "✓" : ""}</span>
+                  <a className="modrow" data-done={mastered} data-next={isNext}
+                     href={`#/m/${m.id}`} key={m.id}>
+                    <span className="modrow-mark">{mastered ? "✓" : isNext ? "▸" : ""}</span>
                     <span className="modrow-t">{m.title}</span>
                     <span className="modrow-b">{m.blurb}</span>
                     <span className="modrow-p">
@@ -312,8 +326,29 @@ function Workspace({
   const [showHint, setShowHint] = useState(false);
   const [showSolution, setShowSolution] = useState(false);
 
+  const codeRef = React.useRef(code);
+  const runningRef = React.useRef(running);
+  const runRef = React.useRef(() => {});
+  const submitRef = React.useRef(() => {});
+  codeRef.current = code;
+  runningRef.current = running;
+
   useEffect(() => warm(problem.schema), [problem.schema]);
   useEffect(() => sessionStorage.setItem(draftKey, code), [code, draftKey]);
+
+  // Cmd/Ctrl+Enter submits, Cmd/Ctrl+Shift+Enter runs. Same binding as psql
+  // clients and every SQL IDE, so it is already in the muscle memory of the
+  // people this is for.
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (!(e.metaKey || e.ctrlKey) || e.key !== "Enter") return;
+      e.preventDefault();
+      if (!codeRef.current.trim() || runningRef.current) return;
+      (e.shiftKey ? runRef : submitRef).current();
+    };
+    addEventListener("keydown", onKey);
+    return () => removeEventListener("keydown", onKey);
+  }, []);
 
   const run = async () => {
     setRunning(true); setOutcome(null); setError(null);
@@ -335,6 +370,9 @@ function Workspace({
     } finally { setRunning(false); }
   };
 
+  runRef.current = run;
+  submitRef.current = submit;
+
   return (
     <div className="work">
       <div className="card">
@@ -353,14 +391,22 @@ function Workspace({
               : <p className="prompt" style={{ marginTop: 8 }}>💡 {problem.hint}</p>}
           </div>
         )}
-        {!hideHelp && <ExpectedOutput key={problem.id} problem={problem} />}
-        <SchemaMini problem={problem} />
+        {!hideHelp && (
+          <details className="disc">
+            <summary>Target result <span className="disc-note">what a correct query returns</span></summary>
+            <ExpectedOutput key={problem.id} problem={problem} />
+          </details>
+        )}
+        <details className="disc">
+          <summary>Tables <span className="disc-note">the data you are querying</span></summary>
+          <SchemaMini problem={problem} />
+        </details>
       </div>
       <div>
         <div className="card editor-card">
           <CodeMirror
             value={code}
-            height="260px"
+            height="380px"
             // Wrap long queries instead of scrolling sideways: SQL is read
             // top-to-bottom and a hidden right-hand edge loses the clause
             // that is usually wrong.
@@ -385,6 +431,7 @@ function Workspace({
             )}
             <span className="spacer" />
             {result && <span className="ms">{result.rows.length} row(s) · {result.elapsedMs}ms</span>}
+            <span className="kbd" title="Submit">⌘↵</span>
           </div>
           {!hideHelp && showSolution && (
             <div className="answer">

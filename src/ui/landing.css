@@ -15,34 +15,19 @@
      sell a product that boasts about weighing nothing.
    ========================================================================== */
 
+@import "./tokens.css";
+
 .lp {
-  /* ink ramp — warm graphite rather than pure black, so it sits on paper */
-  --lp-ink: #14140f;
-  --lp-ink-2: #3e3e36;
-  --lp-ink-3: #6b6a5f;
-  --lp-faint: #94938a;
+  /* Landing keeps its --lp-* names so its rules read unchanged, but every one
+     now resolves to the shared token. One palette, two namespaces. */
+  --lp-ink: var(--ink); --lp-ink-2: var(--ink-2); --lp-ink-3: var(--ink-3); --lp-faint: var(--ink-4);
+  --lp-paper: var(--paper); --lp-paper-2: var(--paper-2); --lp-card: var(--surface);
+  --lp-rule: var(--rule); --lp-rule-2: var(--rule-2);
+  --lp-green: var(--accent); --lp-green-ink: var(--accent-ink); --lp-green-wash: var(--accent-wash);
+  --lp-red: var(--bad); --lp-red-wash: var(--bad-wash);
+  --lp-sans: var(--sans); --lp-mono: var(--mono);
+  --lp-shadow: var(--shadow); --lp-shadow-lg: var(--shadow-lg);
 
-  /* paper */
-  --lp-paper: #fbfbf8;
-  --lp-paper-2: #f4f3ee;
-  --lp-card: #ffffff;
-
-  /* rules */
-  --lp-rule: rgba(20, 20, 15, 0.10);
-  --lp-rule-2: rgba(20, 20, 15, 0.06);
-
-  /* the one accent */
-  --lp-green: #12855c;
-  --lp-green-ink: #0b5c3f;
-  --lp-green-wash: rgba(18, 133, 92, 0.07);
-
-  --lp-sans: Inter, ui-sans-serif, -apple-system, "Segoe UI", Roboto, sans-serif;
-  --lp-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
-
-  --lp-shadow: 0 1px 2px rgba(20, 20, 15, .04), 0 8px 24px -12px rgba(20, 20, 15, .10);
-  --lp-shadow-lg: 0 2px 4px rgba(20, 20, 15, .03), 0 32px 64px -32px rgba(20, 20, 15, .22);
-
-  /* one spacing scale, used everywhere */
   --s1: 4px; --s2: 8px; --s3: 12px; --s4: 16px; --s5: 24px;
   --s6: 32px; --s7: 48px; --s8: 64px; --s9: 96px; --s10: 140px;
 
@@ -56,16 +41,6 @@
   min-height: 100vh;
 }
 
-@media (prefers-color-scheme: dark) {
-  .lp {
-    --lp-ink: #f4f3ee; --lp-ink-2: #c9c8bf; --lp-ink-3: #94938a; --lp-faint: #6b6a5f;
-    --lp-paper: #0c0c0a; --lp-paper-2: #131311; --lp-card: #161613;
-    --lp-rule: rgba(244, 243, 238, 0.12); --lp-rule-2: rgba(244, 243, 238, 0.06);
-    --lp-green: #34c191; --lp-green-ink: #4bd6a4; --lp-green-wash: rgba(52, 193, 145, 0.10);
-    --lp-shadow: 0 1px 2px rgba(0,0,0,.5);
-    --lp-shadow-lg: 0 32px 64px -32px rgba(0,0,0,.8);
-  }
-}
 
 .lp *, .lp *::before, .lp *::after { box-sizing: border-box; }
 .lp p { margin: 0; }
@@ -480,10 +455,6 @@
    a visitor should understand them without reading a paragraph.
    ========================================================================== */
 
-.lp { --lp-red: #b4472f; --lp-red-wash: rgba(180, 71, 47, .07); }
-@media (prefers-color-scheme: dark) {
-  .lp { --lp-red: #ff9d8a; --lp-red-wash: rgba(255, 157, 138, .10); }
-}
 
 /* --- side-by-side comparison ---------------------------------------------- */
 .lp-vs { display: grid; gap: var(--s5); grid-template-columns: 1fr 1fr; align-items: stretch; }

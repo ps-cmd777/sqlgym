@@ -8,7 +8,7 @@ import { groupingAdvanced } from "./modules-grouping";
 import { timeseries } from "./modules-timeseries";
 import { dedup, stats } from "./modules-cleaning";
 import { pivots, textPatterns } from "./modules-shaping";
-import type { Module, Problem } from "./types";
+import type { Module, Problem, Stage } from "./types";
 import { EXTRA } from "./extra-problems";
 import { withVariants } from "./variants";
 
@@ -45,14 +45,62 @@ function tag(p: Problem): Problem {
   return { ...p, topics: deriveTopics(p.solution) };
 }
 
-export const MODULES: Module[] = withVariants([
-  warmups, foundations, nulls, joins, subqueries, expressions, groupingAdvanced,
-  ctes, windows1, windows2, timeseries, patterns, dedup, hierarchy, mutations,
-  pivots, textPatterns, stats, analytics, interviewSet,
-]).map((m) => ({
-  ...m,
-  problems: [...m.problems, ...(EXTRA[m.id] ?? [])].map(tag),
-}));
+/**
+ * The curriculum, in the order the ideas build. Each entry carries its stage,
+ * so the sequence is data rather than a side effect of array position — and
+ * because stages are contiguous here, the roadmap the dashboard renders and
+ * the path "Continue" walks are provably the same list.
+ */
+const CURRICULUM: [Module, Stage][] = [
+  [warmups,          "foundations"],
+  [foundations,      "foundations"],
+
+  [nulls,            "core"],
+  [joins,            "core"],
+  [subqueries,       "core"],
+  [expressions,      "core"],
+
+  [groupingAdvanced, "intermediate"],
+  [ctes,             "intermediate"],
+  [windows1,         "intermediate"],
+  [windows2,         "intermediate"],
+
+  [timeseries,       "advanced"],
+  [patterns,         "advanced"],
+  [dedup,            "advanced"],
+  [hierarchy,        "advanced"],
+  [mutations,        "advanced"],
+  [pivots,           "advanced"],
+  [textPatterns,     "advanced"],
+  [stats,            "advanced"],
+
+  [analytics,        "interview"],
+  [interviewSet,     "interview"],
+];
+
+// Guard: stages must stay contiguous, or the roadmap and the path diverge
+// again. Cheap to check, and it fails loudly at import time rather than
+// quietly misleading a learner.
+{
+  const seen = new Set<Stage>();
+  let prev: Stage | null = null;
+  for (const [, stage] of CURRICULUM) {
+    if (stage !== prev) {
+      if (seen.has(stage)) {
+        throw new Error(`Curriculum stage "${stage}" is not contiguous.`);
+      }
+      seen.add(stage);
+      prev = stage;
+    }
+  }
+}
+
+export const MODULES: Module[] = withVariants(CURRICULUM.map(([m]) => m))
+  .map((m, i) => ({
+    ...m,
+    stage: CURRICULUM[i][1],
+    problems: [...m.problems, ...(EXTRA[m.id] ?? [])].map(tag),
+  }));
 
 export const ALL_PROBLEMS: Problem[] = MODULES.flatMap((m) => m.problems);
 
