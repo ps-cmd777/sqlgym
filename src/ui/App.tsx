@@ -571,12 +571,18 @@ function ProblemView({
 }
 
 function BankView({ progress }: { progress: Progress }) {
+  const [q, setQ] = useState("");
   const [moduleFilter, setModuleFilter] = useState("all");
   const [difficulty, setDifficulty] = useState(0);
   const [status, setStatus] = useState("all");
   const [topic, setTopic] = useState("all");
   const rows = MODULES.flatMap((m) => m.problems.map((p) => ({ p, m })));
+  const needle = q.trim().toLowerCase();
   const filtered = rows.filter(({ p, m }) =>
+    (!needle ||
+      p.title.toLowerCase().includes(needle) ||
+      m.title.toLowerCase().includes(needle) ||
+      (p.topics ?? []).some((t) => t.toLowerCase().includes(needle))) &&
     (moduleFilter === "all" || m.id === moduleFilter) &&
     (difficulty === 0 || p.difficulty === difficulty) &&
     (topic === "all" || (p.topics ?? []).includes(topic)) &&
@@ -589,6 +595,13 @@ function BankView({ progress }: { progress: Progress }) {
       <p className="sub">{filtered.length} of {rows.length} shown — every problem is graded
         against real Postgres plus a hidden dataset.</p>
       <div className="bank-filters">
+        <input
+          className="bank-search"
+          value={q}
+          onChange={(e) => setQ(e.target.value)}
+          placeholder="Search problems, modules and topics"
+          aria-label="Search problems"
+        />
         <select value={moduleFilter} onChange={(e) => setModuleFilter(e.target.value)}>
           <option value="all">All modules</option>
           {MODULES.map((m) => <option key={m.id} value={m.id}>{m.title}</option>)}
@@ -608,6 +621,14 @@ function BankView({ progress }: { progress: Progress }) {
           <option value="solved">Solved only</option>
         </select>
       </div>
+      {!filtered.length && (
+        <p className="empty">
+          Nothing matches those filters.{" "}
+          <button className="btn ghost" onClick={() => {
+            setQ(""); setModuleFilter("all"); setDifficulty(0); setTopic("all"); setStatus("all");
+          }}>Clear them</button>
+        </p>
+      )}
       <div className="plist">
         {filtered.map(({ p, m }) => (
           <div className="prow" key={p.id} onClick={() => (location.hash = `#/p/${p.id}`)}>
@@ -649,23 +670,30 @@ function InterviewView({
 
   if (!started) {
     return (
-      <>
-        <h1>Timed interview mode</h1>
-        <p className="sub">
-          5 problems · 40 minutes · no hints, no solutions — the honest rehearsal.
-          Today's draw is fixed; come back tomorrow for a new set.
+      <div className="iv-start">
+        <span className="t-eyebrow">Timed interview</span>
+        <h1 className="iv-h">Five problems. Forty minutes. No hints.</h1>
+        <p className="iv-lede">
+          Knowing a pattern and producing it under a clock are different skills, and
+          only one of them gets tested in the room. This is the second one.
         </p>
-        <div className="card" style={{ maxWidth: 640 }}>
-          <p className="prompt">
-            You'll get a mix of difficulties drawn from the interview-eligible pool.
-            Submit grades instantly (including the hidden-dataset check). You can move
-            between problems freely. The timer starts when you click begin.
-          </p>
-          <div style={{ marginTop: 14 }}>
-            <button className="btn primary" onClick={() => setStarted(true)}>Begin</button>
-          </div>
+
+        <dl className="iv-facts">
+          <div><dt>Draw</dt><dd>{problems.length} problems, mixed difficulty</dd></div>
+          <div><dt>Clock</dt><dd>40 minutes, counting down</dd></div>
+          <div><dt>Help</dt><dd>No hints, no answers</dd></div>
+          <div><dt>Grading</dt><dd>Instant, hidden dataset included</dd></div>
+          <div><dt>Order</dt><dd>Move between problems freely</dd></div>
+          <div><dt>Today's set</dt><dd>Fixed — a new draw tomorrow</dd></div>
+        </dl>
+
+        <div className="iv-go">
+          <button className="btn primary" onClick={() => setStarted(true)}>
+            Begin — the clock starts now
+          </button>
+          <a className="resume-alt" href="#/app">Not yet, back to practice</a>
         </div>
-      </>
+      </div>
     );
   }
 

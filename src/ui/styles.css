@@ -539,3 +539,46 @@ nav.top .btn { padding: 7px 13px; font-size: 13.5px; }
 }
 .yours-label em { font-style: normal; letter-spacing: 0; text-transform: none; }
 .samples-label em { font-style: normal; letter-spacing: 0; text-transform: none; color: var(--ink-4); }
+
+/* --- interview: the start screen ------------------------------------------
+   This was one paragraph and a button in the corner of an empty page, which
+   is the least designed screen in the product and the most emotionally
+   loaded. It should feel like standing up to something.
+   ------------------------------------------------------------------------ */
+.iv-start { max-width: 680px; margin: var(--s9) auto 0; text-align: center; }
+.iv-start .t-eyebrow { display: block; margin-bottom: var(--s4); }
+.iv-h {
+  font-size: clamp(30px, 4.6vw, 46px); line-height: 1.06;
+  letter-spacing: -.035em; font-weight: 620; margin-bottom: var(--s4);
+}
+.iv-lede { font-size: 16.5px; line-height: 1.6; color: var(--ink-2);
+  max-width: 52ch; margin: 0 auto var(--s7); }
+
+.iv-facts {
+  display: grid; grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0; text-align: left; border-top: 1px solid var(--rule-2); margin-bottom: var(--s7);
+}
+.iv-facts > div {
+  display: flex; align-items: baseline; gap: var(--s4);
+  padding: var(--s3) 0; border-bottom: 1px solid var(--rule-2);
+}
+.iv-facts > div:nth-child(odd) { padding-right: var(--s6); }
+.iv-facts dt {
+  font: 500 10.5px/1.5 var(--mono); letter-spacing: .12em; text-transform: uppercase;
+  color: var(--ink-4); width: 7.5rem; flex: none;
+}
+.iv-facts dd { font-size: 14px; color: var(--ink-2); margin: 0; }
+@media (max-width: 620px) {
+  .iv-facts { grid-template-columns: 1fr; }
+  .iv-facts > div:nth-child(odd) { padding-right: 0; }
+}
+
+.iv-go { display: grid; gap: var(--s3); justify-items: center; }
+.iv-go .btn { padding: 13px 26px; font-size: 15px; }
+
+/* Empty state. There was none: filtering to nothing left a blank page. */
+.empty {
+  display: flex; align-items: center; justify-content: center; gap: var(--s2);
+  padding: var(--s9) var(--s5); color: var(--ink-3); font-size: 15px;
+  border: 1px dashed var(--rule); border-radius: var(--r-md);
+}
