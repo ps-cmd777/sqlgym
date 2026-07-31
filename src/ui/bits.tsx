@@ -185,6 +185,27 @@ export const loadProgress = (): Progress => {
 };
 export const saveProgress = (p: Progress) => localStorage.setItem(KEY, JSON.stringify(p));
 
+/** Solve days, for the streak and for export. */
+export const loadDays = (): string[] => {
+  try { return JSON.parse(localStorage.getItem(DAYS_KEY) ?? "[]"); } catch { return []; }
+};
+
+/**
+ * Merge restored progress into what is already here rather than replacing it.
+ * Someone restoring on a machine where they have also been practising should
+ * never lose the newer work, so solved wins over unsolved and days union.
+ */
+export function mergeProgress(solved: string[], days: string[]): Progress {
+  const current = loadProgress();
+  const merged: Progress = { ...current };
+  for (const id of solved) merged[id] = "solved";
+  saveProgress(merged);
+
+  const allDays = [...new Set([...loadDays(), ...days])].sort();
+  localStorage.setItem(DAYS_KEY, JSON.stringify(allDays.slice(-365)));
+  return merged;
+}
+
 /** Solve-day tracking for the streak indicator. Dates only, local time. */
 export function recordSolveDay(): void {
   const today = new Date().toLocaleDateString("sv"); // YYYY-MM-DD

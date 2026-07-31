@@ -10,9 +10,10 @@ import { runQuery, warm, type QueryResult } from "../engine/engine";
 import { explainError } from "../grader/explain";
 import { gradeProblem, type GradeOutcome } from "../grader/grader";
 import {
-  currentStreak, DiffBadge, loadProgress, Markdown, recordSolveDay, ResultTable,
-  saveProgress, VerdictBox, type Progress,
+  currentStreak, DiffBadge, loadDays, loadProgress, Markdown, mergeProgress,
+  recordSolveDay, ResultTable, saveProgress, VerdictBox, type Progress,
 } from "./bits";
+import { decodeProgress, encodeProgress } from "../progress/portable";
 
 type Route =
   | { view: "landing" }
@@ -52,6 +53,9 @@ export default function App() {
     });
   }, []);
 
+  // A restore writes straight to localStorage, so React state has to be told.
+  const refresh = useCallback(() => setProgress(loadProgress()), []);
+
   const crumb =
     route.view === "module" ? MODULES.find((m) => m.id === route.id)?.title :
     route.view === "problem" ? problemById.get(route.id)?.title :
@@ -73,7 +77,7 @@ export default function App() {
         </span>
       </nav>
       <div className="wrap">
-        {route.view === "home" && <Home progress={progress} />}
+        {route.view === "home" && <Home progress={progress} onProgressChanged={refresh} />}
         {route.view === "module" && <ModuleView id={route.id} progress={progress} />}
         {route.view === "problem" && (
           <ProblemView key={route.id} id={route.id} onResult={mark} />
@@ -85,7 +89,7 @@ export default function App() {
   );
 }
 
-function Home({ progress }: { progress: Progress }) {
+function Home({ progress, onProgressChanged }: { progress: Progress; onProgressChanged: () => void }) {
   const solved = Object.values(progress).filter((s) => s === "solved").length;
   const total = MODULES.reduce((n, m) => n + m.problems.length, 0);
   const hard = MODULES.flatMap((m) => m.problems)
@@ -190,6 +194,8 @@ function Home({ progress }: { progress: Progress }) {
           </section>
         );
       })}
+
+      <ProgressPortability progress={progress} onRestore={onProgressChanged} />
     </>
   );
 }
@@ -481,6 +487,85 @@ function SqlError({ raw }: { raw: string }) {
         <pre>{raw}</pre>
       </details>
     </div>
+  );
+}
+
+/**
+ * Progress is portable without an account. SQLGym stores everything in
+ * localStorage, which keeps the privacy claim honest but means a new browser
+ * or a cleared cache wipes the work. This lets a learner carry it themselves:
+ * copy a string, paste it anywhere else. No server, no email, no login.
+ *
+ * Restoring merges rather than replaces, so practising on two machines never
+ * costs you the newer of the two.
+ */
+function ProgressPortability({ progress, onRestore }: {
+  progress: Progress; onRestore: () => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const [code, setCode] = useState("");
+  const [note, setNote] = useState<{ kind: "ok" | "bad"; text: string } | null>(null);
+
+  const solved = Object.entries(progress).filter(([, s]) => s === "solved").map(([id]) => id);
+  const mine = encodeProgress({ solved, days: loadDays() });
+
+  const copy = async () => {
+    try {
+      await navigator.clipboard.writeText(mine);
+      setNote({ kind: "ok", text: "Copied. Save it somewhere you will find it again." });
+    } catch {
+      setNote({ kind: "bad", text: "Could not reach the clipboard. Select the code and copy it manually." });
+    }
+  };
+
+  const restore = () => {
+    const out = decodeProgress(code);
+    if (!out.ok) { setNote({ kind: "bad", text: out.error }); return; }
+    const before = solved.length;
+    const merged = mergeProgress(out.value.solved, out.value.days);
+    const after = Object.values(merged).filter((s) => s === "solved").length;
+    const added = after - before;
+    setCode("");
+    setNote({
+      kind: "ok",
+      text: added > 0
+        ? `Restored. ${added} more problem${added === 1 ? "" : "s"} marked solved.`
+        : "Restored. Nothing new in that code — this browser was already up to date.",
+    });
+    onRestore();
+  };
+
+  return (
+    <section className="port">
+      <button className="port-toggle" onClick={() => setOpen((v) => !v)} aria-expanded={open}>
+        Move your progress to another browser
+        <span className="chev">{open ? "−" : "+"}</span>
+      </button>
+      {open && (
+        <div className="port-body">
+          <p className="port-lede">
+            There is no account, so progress lives in this browser only. Copy this code
+            to carry it somewhere else. It contains solved problem ids and practice
+            dates, nothing else.
+          </p>
+          <div className="port-row">
+            <code className="port-code">{mine.slice(0, 64)}{mine.length > 64 ? "…" : ""}</code>
+            <button className="btn" onClick={copy}>Copy</button>
+          </div>
+          <div className="port-row">
+            <input
+              className="bank-search"
+              value={code}
+              onChange={(e) => { setCode(e.target.value); setNote(null); }}
+              placeholder="Paste a progress code to restore"
+              aria-label="Paste a progress code"
+            />
+            <button className="btn" onClick={restore} disabled={!code.trim()}>Restore</button>
+          </div>
+          {note && <p className={`port-note is-${note.kind}`}>{note.text}</p>}
+        </div>
+      )}
+    </section>
   );
 }
 
