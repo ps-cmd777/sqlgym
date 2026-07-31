@@ -370,9 +370,20 @@ nav.top .btn { padding: 7px 13px; font-size: 13.5px; }
 .verdict.ok { background: var(--accent-wash); color: var(--accent-ink); font-weight: 600; }
 .verdict.no { background: var(--bad-wash); color: var(--bad); }
 .verdict.no b { display: block; margin-bottom: var(--s1); }
-.verdict .samples { margin-top: var(--s3); font: 400 12px/1.6 var(--mono); }
-.verdict .samples table { border-collapse: collapse; margin-top: var(--s1); width: 100%; }
-.verdict .samples td { padding: 3px var(--s3) 3px 0; color: var(--ink-2); }
+.verdict-fix { font-size: 13.5px; line-height: 1.6; color: var(--ink-2); margin-top: var(--s1); }
+.verdict-detail { font: 450 12.5px/1.6 var(--mono); color: var(--ink-3); margin-top: var(--s2); }
+
+/* The two counts side by side: the gap between them is the whole diagnosis. */
+.verdict-counts { display: flex; gap: var(--s6); margin-top: var(--s4); }
+.verdict-counts span { display: grid; gap: 2px; font: 500 10.5px/1 var(--mono);
+  letter-spacing: .12em; text-transform: uppercase; color: var(--ink-4); }
+.verdict-counts i { font-style: normal; font: 620 22px/1 var(--sans);
+  letter-spacing: -.02em; color: var(--ink); font-variant-numeric: tabular-nums; }
+
+.samples { margin-top: var(--s4); }
+.samples-label { display: block; margin-bottom: var(--s2);
+  font: 500 10.5px/1 var(--mono); letter-spacing: .12em; text-transform: uppercase; color: var(--ink-4); }
+.samples .rtable { background: var(--surface); }
 
 .sql-error {
   font: 450 12.5px/1.6 var(--mono); color: var(--bad);
@@ -517,3 +528,14 @@ nav.top .btn { padding: 7px 13px; font-size: 13.5px; }
 .sql-error-raw pre { margin-top: var(--s2); white-space: pre-wrap;
   font: 450 12px/1.6 var(--mono); color: var(--ink-3); }
 .sql-error > pre { white-space: pre-wrap; font: 450 12.5px/1.6 var(--mono); }
+
+/* The learner's own output, labelled. Unlabelled it read as part of the
+   verdict above it, which is a different thing entirely. */
+.yours { margin-top: var(--s5); }
+.yours-label {
+  display: flex; align-items: baseline; gap: var(--s3); margin-bottom: var(--s2);
+  font: 500 10.5px/1 var(--mono); letter-spacing: .12em; text-transform: uppercase;
+  color: var(--ink-4);
+}
+.yours-label em { font-style: normal; letter-spacing: 0; text-transform: none; }
+.samples-label em { font-style: normal; letter-spacing: 0; text-transform: none; color: var(--ink-4); }

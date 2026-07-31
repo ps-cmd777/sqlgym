@@ -69,6 +69,18 @@ export interface Verdict {
   missingSample: string[][];
   extraSample: string[][];
   hiddenFailed?: boolean; // passed visible but failed hidden → hardcoding
+  /** What kind of mismatch this is, so the UI can lead with the diagnosis
+   *  instead of parsing it back out of `message`. */
+  kind?: "columns" | "order" | "rows";
+  /** Column headers for the sample tables. Without these the samples are
+   *  bare values and the learner has to guess which column is which. */
+  columns?: string[];
+  expectedCount?: number;
+  actualCount?: number;
+  /** Totals behind the 5-row samples, so the UI can say "5 of 44" rather than
+   *  silently truncating and leaving the learner to wonder. */
+  missingTotal?: number;
+  extraTotal?: number;
 }
 
 export function compareResults(
@@ -86,6 +98,10 @@ export function compareResults(
         `(${expected.columns.join(", ")}), got ${actual.columns.length} ` +
         `(${actual.columns.join(", ") || "none"}).`,
       missingSample: [], extraSample: [],
+      kind: "columns",
+      columns: expected.columns,
+      expectedCount: expected.columns.length,
+      actualCount: actual.columns.length,
     };
   }
 
@@ -103,16 +119,20 @@ export function compareResults(
         correct: false,
         message: "Right rows, wrong order — this problem requires a specific ORDER BY.",
         missingSample: [], extraSample: [],
+        kind: "order",
+        columns: expected.columns,
+        expectedCount: expectedKeys.length,
+        actualCount: actualKeys.length,
       };
     }
-    return diffVerdict(actualKeys.length, expectedKeys.length, multiset, pretty);
+    return diffVerdict(actualKeys.length, expectedKeys.length, multiset, pretty, expected.columns);
   }
 
   const multiset = compareMultiset(actualKeys, expectedKeys);
   if (multiset.missing.length === 0 && multiset.extra.length === 0) {
     return { correct: true, message: "Correct.", missingSample: [], extraSample: [] };
   }
-  return diffVerdict(actualKeys.length, expectedKeys.length, multiset, pretty);
+  return diffVerdict(actualKeys.length, expectedKeys.length, multiset, pretty, expected.columns);
 }
 
 function compareMultiset(actual: string[], expected: string[]) {
@@ -133,6 +153,7 @@ function diffVerdict(
   actualCount: number, expectedCount: number,
   { missing, extra }: { missing: string[]; extra: string[] },
   pretty: (k: string) => string[],
+  columns?: string[],
 ): Verdict {
   const parts = [`Expected ${expectedCount} row(s), got ${actualCount}.`];
   if (missing.length) parts.push(`${missing.length} expected row(s) missing.`);
@@ -142,6 +163,12 @@ function diffVerdict(
     message: parts.join(" "),
     missingSample: missing.slice(0, 5).map(pretty),
     extraSample: extra.slice(0, 5).map(pretty),
+    kind: "rows",
+    columns,
+    expectedCount,
+    actualCount,
+    missingTotal: missing.length,
+    extraTotal: extra.length,
   };
 }
 

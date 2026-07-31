@@ -451,7 +451,14 @@ function Workspace({
         {error && <SqlError raw={error} />}
         {outcome && !outcome.error && <VerdictBox verdict={outcome.verdict} />}
         {outcome?.verdict.correct && mod && <SolvedPanel problem={problem} mod={mod} />}
-        {result && <ResultTable result={result} />}
+        {result && (
+          <div className="yours">
+            <span className="yours-label">
+              Your result <em>{result.rows.length} row{result.rows.length === 1 ? "" : "s"}</em>
+            </span>
+            <ResultTable result={result} />
+          </div>
+        )}
       </div>
     </div>
   );

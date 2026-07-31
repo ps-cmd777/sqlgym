@@ -92,33 +92,86 @@ export function ResultTable({ result }: { result: QueryResult }) {
   );
 }
 
+/**
+ * The failure state, which is where the learning actually happens. This used
+ * to be an unstyled dump of sample rows with no column headers, so a learner
+ * had to guess which value belonged to which column.
+ *
+ * Now it leads with the diagnosis, states the two counts side by side, and
+ * labels the sample tables. Ordering and column-count mismatches get their own
+ * treatment because they are different mistakes with different fixes.
+ */
 export function VerdictBox({ verdict }: { verdict: Verdict }) {
   if (verdict.correct) {
     return <div className="verdict ok">✓ {verdict.message}</div>;
   }
+
+  const headline =
+    verdict.hiddenFailed ? "Passed the visible data, failed the hidden data"
+    : verdict.kind === "columns" ? "The columns do not match"
+    : verdict.kind === "order"   ? "Right rows, wrong order"
+    : "The rows do not match";
+
+  const fix =
+    verdict.hiddenFailed ? "Something in the query is hardcoded to the data you can see. It has to compute the answer instead."
+    : verdict.kind === "columns" ? "Select exactly the columns the problem asks for, in that order, with those names."
+    : verdict.kind === "order"   ? "The values are all correct. Add or correct the ORDER BY."
+    : null;
+
   return (
     <div className="verdict no">
-      <b>✗ Not yet.</b> {verdict.message}
-      {verdict.missingSample.length > 0 && (
-        <div className="samples">
-          Missing rows (sample):
-          <table><tbody>
-            {verdict.missingSample.map((row, i) => (
-              <tr key={i}>{row.map((c, j) => <td key={j}>{c}</td>)}</tr>
-            ))}
-          </tbody></table>
+      <b>{headline}</b>
+      {fix && <p className="verdict-fix">{fix}</p>}
+
+      {verdict.kind === "rows" &&
+        verdict.expectedCount !== undefined && verdict.actualCount !== undefined && (
+        <div className="verdict-counts">
+          <span><i>{verdict.actualCount}</i> returned</span>
+          <span><i>{verdict.expectedCount}</i> expected</span>
         </div>
       )}
-      {verdict.extraSample.length > 0 && (
-        <div className="samples">
-          Unexpected rows (sample):
-          <table><tbody>
-            {verdict.extraSample.map((row, i) => (
+
+      {verdict.kind === "columns" && <p className="verdict-detail">{verdict.message}</p>}
+
+      <SampleTable
+        label="Expected, but missing from your result"
+        rows={verdict.missingSample}
+        total={verdict.missingTotal}
+        columns={verdict.columns}
+      />
+      <SampleTable
+        label="In your result, but not expected"
+        rows={verdict.extraSample}
+        total={verdict.extraTotal}
+        columns={verdict.columns}
+      />
+    </div>
+  );
+}
+
+function SampleTable({ label, rows, columns, total }: {
+  label: string; rows: string[][]; columns?: string[]; total?: number;
+}) {
+  if (!rows.length) return null;
+  const truncated = total !== undefined && total > rows.length;
+  return (
+    <div className="samples">
+      <span className="samples-label">
+        {label}
+        {truncated && <em> · showing {rows.length} of {total}</em>}
+      </span>
+      <div className="rtable">
+        <table>
+          {columns && (
+            <thead><tr>{columns.map((c, i) => <th key={i}>{c}</th>)}</tr></thead>
+          )}
+          <tbody>
+            {rows.map((row, i) => (
               <tr key={i}>{row.map((c, j) => <td key={j}>{c}</td>)}</tr>
             ))}
-          </tbody></table>
-        </div>
-      )}
+          </tbody>
+        </table>
+      </div>
     </div>
   );
 }
