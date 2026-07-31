@@ -275,9 +275,19 @@ nav.top .btn { padding: 7px 13px; font-size: 13.5px; }
 /* ---------------------------------------------------------------------------
    Problem page
    ------------------------------------------------------------------------- */
-.work { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.3fr); gap: var(--s5); align-items: start; }
+/* Stretching the two columns to equal height looked balanced on an empty page
+   but turned the prompt card into a tall empty panel the moment results
+   appeared below the editor. The prompt sticks instead, so it stays readable
+   while you scroll through your output — which is what an IDE does and what
+   you actually want when comparing rows against the task. */
+.work { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.32fr);
+  gap: var(--s5); align-items: start; }
 .work > * { min-width: 0; }
-@media (max-width: 1040px) { .work { grid-template-columns: minmax(0, 1fr); } }
+.work > .card { position: sticky; top: calc(56px + var(--s5)); }
+@media (max-width: 1040px) {
+  .work { grid-template-columns: minmax(0, 1fr); }
+  .work > .card { position: static; }
+}
 
 .card { background: var(--surface); border: 1px solid var(--rule); border-radius: var(--r-md); padding: var(--s5); }
 .card h3 {
@@ -285,7 +295,7 @@ nav.top .btn { padding: 7px 13px; font-size: 13.5px; }
   color: var(--ink-4); margin-bottom: var(--s3);
   display: flex; align-items: center; gap: var(--s3);
 }
-.prompt { font-size: 15.5px; line-height: 1.65; color: var(--ink); }
+.prompt { font-size: 16.5px; line-height: 1.6; color: var(--ink); letter-spacing: -.008em; }
 .prompt code { font: 450 13px/1.5 var(--mono); background: var(--paper-2); color: var(--ink);
   padding: 2px 6px; border-radius: 4px; }
 .reveal { margin-top: var(--s4); }
@@ -298,10 +308,13 @@ nav.top .btn { padding: 7px 13px; font-size: 13.5px; }
   font: 500 11px/1 var(--mono); letter-spacing: .06em; color: var(--accent-ink);
   background: var(--accent-wash); border-radius: 99px; padding: 5px 10px;
 }
-.pill-mod, .pill-topic {
-  font: 400 11.5px/1 var(--mono); color: var(--ink-3);
-  background: var(--paper-2); border-radius: 99px; padding: 5px 10px; white-space: nowrap;
-}
+.pill-mod { font: 400 11.5px/1 var(--mono); color: var(--ink-3);
+  background: var(--paper-2); border-radius: 99px; padding: 5px 10px; white-space: nowrap; }
+/* Topics are derived metadata, useful but not worth the same weight as the
+   difficulty and the interview flag sitting beside them. */
+.pill-topic { font: 400 11.5px/1 var(--mono); color: var(--ink-4);
+  padding: 5px 0; white-space: nowrap; }
+.pill-topic + .pill-topic::before { content: "· "; color: var(--rule); }
 .expected { margin-top: var(--s5); }
 .expected h3, .schema-mini > h3 {
   font: 500 11px/1 var(--mono); letter-spacing: .16em; text-transform: uppercase;
