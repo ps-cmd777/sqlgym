@@ -12,7 +12,11 @@
  * restore. The privacy claim survives completely.
  *
  * Format:  sqlgym1.<base64url payload>.<checksum>
- * Payload: solvedIds joined by "," then "|" then solve-days as YYMMDD
+ * Payload: solvedIds "|" solve-days as YYMMDD "|" reviews as id:stage:due:last
+ *
+ * The third section is optional. A code written before review scheduling
+ * existed has two sections and still decodes, which matters because someone
+ * may have saved one already.
  *
  * Ids and dates are short by design, so a full 185-problem history is roughly
  * a kilobyte — small enough to paste into a note, a password manager or a
@@ -23,6 +27,9 @@ export interface PortableProgress {
   solved: string[];
   /** ISO days, "YYYY-MM-DD". Drives the streak. */
   days: string[];
+  /** Review schedule, "id:stage:YYMMDD". Optional so codes written before
+   *  review existed still decode. */
+  reviews?: { id: string; stage: number; due: string; last: string }[];
 }
 
 const PREFIX = "sqlgym1";
@@ -54,7 +61,10 @@ const DAYS_KEPT = 90;
 
 export function encodeProgress(p: PortableProgress): string {
   const days = [...p.days].sort().slice(-DAYS_KEPT);
-  const body = `${p.solved.join(",")}|${days.map(packDay).join(",")}`;
+  const reviews = (p.reviews ?? [])
+    .map((r) => `${r.id}:${r.stage}:${packDay(r.due)}:${packDay(r.last)}`)
+    .join(",");
+  const body = `${p.solved.join(",")}|${days.map(packDay).join(",")}|${reviews}`;
   const payload = toB64Url(body);
   return `${PREFIX}.${payload}.${checksum(body)}`;
 }
@@ -85,11 +95,18 @@ export function decodeProgress(code: string): DecodeResult {
     return { ok: false, error: "The code looks incomplete. Copy the whole thing and retry." };
   }
 
-  const [solvedPart = "", daysPart = ""] = body.split("|");
+  const [solvedPart = "", daysPart = "", reviewPart = ""] = body.split("|");
   const solved = solvedPart ? solvedPart.split(",").filter(Boolean) : [];
   const days = daysPart
     ? daysPart.split(",").filter((d) => /^\d{6}$/.test(d)).map(unpackDay)
     : [];
+  const reviews = reviewPart
+    ? reviewPart.split(",").filter(Boolean).flatMap((chunk) => {
+        const [id, stage, due, last] = chunk.split(":");
+        if (!id || !/^\d+$/.test(stage ?? "") || !/^\d{6}$/.test(due ?? "")) return [];
+        return [{ id, stage: Number(stage), due: unpackDay(due), last: unpackDay(last ?? due) }];
+      })
+    : [];
 
-  return { ok: true, value: { solved, days } };
+  return { ok: true, value: { solved, days, reviews } };
 }

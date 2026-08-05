@@ -12,13 +12,51 @@ describe("portable progress", () => {
   it("round-trips exactly", () => {
     const out = decodeProgress(encodeProgress(sample));
     expect(out.ok).toBe(true);
-    if (out.ok) expect(out.value).toEqual(sample);
+    if (out.ok) expect(out.value).toEqual({ ...sample, reviews: [] });
   });
 
   it("round-trips an empty history", () => {
     const out = decodeProgress(encodeProgress({ solved: [], days: [] }));
     expect(out.ok).toBe(true);
-    if (out.ok) expect(out.value).toEqual({ solved: [], days: [] });
+    if (out.ok) expect(out.value).toEqual({ solved: [], days: [], reviews: [] });
+  });
+
+  it("carries the review schedule", () => {
+    const withReviews = {
+      ...sample,
+      reviews: [
+        { id: "f1", stage: 2, due: "2026-08-12", last: "2026-08-05" },
+        { id: "n3", stage: 0, due: "2026-08-06", last: "2026-08-05" },
+      ],
+    };
+    const out = decodeProgress(encodeProgress(withReviews));
+    expect(out.ok).toBe(true);
+    if (out.ok) expect(out.value.reviews).toEqual(withReviews.reviews);
+  });
+
+  it("still decodes a code written before review scheduling existed", () => {
+    // Two sections rather than three. Someone may already have saved one.
+    const body = "wu1,wu2|260730,260731";
+    const b64 = btoa(body).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+    let h = 0x811c9dc5;
+    for (let i = 0; i < body.length; i++) {
+      h ^= body.charCodeAt(i);
+      h = Math.imul(h, 0x01000193) >>> 0;
+    }
+    const out = decodeProgress(`sqlgym1.${b64}.${h.toString(36)}`);
+    expect(out.ok).toBe(true);
+    if (out.ok) {
+      expect(out.value.solved).toEqual(["wu1", "wu2"]);
+      expect(out.value.reviews).toEqual([]);
+    }
+  });
+
+  it("drops a malformed review entry rather than failing the whole restore", () => {
+    const withJunk = { ...sample, reviews: [{ id: "f1", stage: 1, due: "2026-08-08", last: "2026-08-05" }] };
+    const code = encodeProgress(withJunk);
+    const out = decodeProgress(code);
+    expect(out.ok).toBe(true);
+    if (out.ok) expect(out.value.reviews).toHaveLength(1);
   });
 
   it("stays small enough to paste even with everything solved", () => {

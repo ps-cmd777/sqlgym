@@ -10,9 +10,11 @@ import { runQuery, warm, type QueryResult } from "../engine/engine";
 import { explainError } from "../grader/explain";
 import { gradeProblem, type GradeOutcome } from "../grader/grader";
 import {
-  currentStreak, DiffBadge, loadDays, loadProgress, Markdown, mergeProgress,
-  recordSolveDay, ResultTable, saveProgress, VerdictBox, type Progress,
+  currentStreak, DiffBadge, loadDays, loadProgress, loadReviews, Markdown,
+  mergeProgress, recordReview, recordSolveDay, ResultTable, saveProgress,
+  VerdictBox, type Progress,
 } from "./bits";
+import { dueIds, pickForReview } from "../progress/review";
 import { decodeProgress, encodeProgress } from "../progress/portable";
 
 type Route =
@@ -45,6 +47,7 @@ export default function App() {
 
   const mark = useCallback((id: string, status: "solved" | "attempted") => {
     if (status === "solved") recordSolveDay();
+    recordReview(id, status === "solved");
     setProgress((prev) => {
       if (prev[id] === "solved") return prev;
       const next = { ...prev, [id]: status };
@@ -100,6 +103,14 @@ function Home({ progress, onProgressChanged }: { progress: Progress; onProgressC
     .filter((p) => progress[p.id] !== "solved")
     .reduce((n, p) => n + estMinutes(p.difficulty), 0);
 
+  // Anything the schedule says is due today. Reviews come before new material:
+  // there is no point learning a sixth idea while the third is slipping away.
+  const allIds = MODULES.flatMap((m) => m.problems).map((p) => p.id);
+  const due = dueIds(loadReviews());
+  const reviewTarget = due.length
+    ? pickForReview(due[0], allIds, (id) => progress[id] === "solved")
+    : null;
+
   // What do I do next? The next unsolved problem on the Core Path, and the
   // module it sits in, so the card can say where you are rather than just
   // linking somewhere.
@@ -150,6 +161,18 @@ function Home({ progress, onProgressChanged }: { progress: Progress; onProgressC
           </div>
           <div className="resume-go"><a className="btn primary" href="#/interview">Interview mode →</a></div>
         </section>
+      )}
+
+      {reviewTarget && (
+        <a className="due" href={`#/p/${reviewTarget}`}>
+          <span className="due-n">{due.length}</span>
+          <span className="due-t">
+            <b>{due.length === 1 ? "One step is" : `${due.length} steps are`} due for review</b>
+            <span>You solved {due.length === 1 ? "it" : "these"} a while ago.
+              {" "}Coming back now is what makes it stick.</span>
+          </span>
+          <span className="btn">Review →</span>
+        </a>
       )}
 
       <div className="statline">
@@ -539,7 +562,11 @@ function ProgressPortability({ progress, onRestore }: {
   const [note, setNote] = useState<{ kind: "ok" | "bad"; text: string } | null>(null);
 
   const solved = Object.entries(progress).filter(([, s]) => s === "solved").map(([id]) => id);
-  const mine = encodeProgress({ solved, days: loadDays() });
+  const mine = encodeProgress({
+    solved,
+    days: loadDays(),
+    reviews: Object.entries(loadReviews()).map(([id, e]) => ({ id, ...e })),
+  });
 
   const copy = async () => {
     try {
@@ -554,7 +581,7 @@ function ProgressPortability({ progress, onRestore }: {
     const out = decodeProgress(code);
     if (!out.ok) { setNote({ kind: "bad", text: out.error }); return; }
     const before = solved.length;
-    const merged = mergeProgress(out.value.solved, out.value.days);
+    const merged = mergeProgress(out.value.solved, out.value.days, out.value.reviews);
     const after = Object.values(merged).filter((s) => s === "solved").length;
     const added = after - before;
     setCode("");

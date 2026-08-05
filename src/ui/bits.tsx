@@ -3,6 +3,7 @@
 import React from "react";
 import type { QueryResult } from "../engine/engine";
 import type { Verdict } from "../grader/grader";
+import { baseId, onCorrect, onIncorrect, type Reviews } from "../progress/review";
 import { DIFFICULTY_LABELS, type Difficulty } from "../content/types";
 
 /** Renders the theory markdown-lite dialect: ## h2, ```blocks, **bold**,
@@ -185,6 +186,29 @@ export const loadProgress = (): Progress => {
 };
 export const saveProgress = (p: Progress) => localStorage.setItem(KEY, JSON.stringify(p));
 
+/** Spaced review schedule, keyed by problem id. */
+const REVIEW_KEY = "sqlgym-reviews-v1";
+export const loadReviews = (): Reviews => {
+  try { return JSON.parse(localStorage.getItem(REVIEW_KEY) ?? "{}"); } catch { return {}; }
+};
+export const saveReviews = (r: Reviews) => localStorage.setItem(REVIEW_KEY, JSON.stringify(r));
+
+/**
+ * Record the outcome of an answer against the review schedule. A review is
+ * keyed by the base problem, not the variant, so solving "f1-b" advances the
+ * same item that "f1" created.
+ */
+export function recordReview(problemId: string, correct: boolean): void {
+  const reviews = loadReviews();
+  const key = baseId(problemId);
+  const existing = reviews[key];
+  // A wrong answer on something never scheduled is just an attempt, not a
+  // review failure, so it should not create a schedule entry.
+  if (!correct && !existing) return;
+  reviews[key] = correct ? onCorrect(existing) : onIncorrect(existing!);
+  saveReviews(reviews);
+}
+
 /** Solve days, for the streak and for export. */
 export const loadDays = (): string[] => {
   try { return JSON.parse(localStorage.getItem(DAYS_KEY) ?? "[]"); } catch { return []; }
@@ -195,7 +219,11 @@ export const loadDays = (): string[] => {
  * Someone restoring on a machine where they have also been practising should
  * never lose the newer work, so solved wins over unsolved and days union.
  */
-export function mergeProgress(solved: string[], days: string[]): Progress {
+export function mergeProgress(
+  solved: string[],
+  days: string[],
+  reviews: { id: string; stage: number; due: string; last: string }[] = [],
+): Progress {
   const current = loadProgress();
   const merged: Progress = { ...current };
   for (const id of solved) merged[id] = "solved";
@@ -203,6 +231,18 @@ export function mergeProgress(solved: string[], days: string[]): Progress {
 
   const allDays = [...new Set([...loadDays(), ...days])].sort();
   localStorage.setItem(DAYS_KEY, JSON.stringify(allDays.slice(-365)));
+
+  // Keep whichever schedule is further along. Restoring an older code should
+  // not undo reviews the learner has since completed on this machine.
+  const currentReviews = loadReviews();
+  for (const r of reviews) {
+    const mine = currentReviews[r.id];
+    if (!mine || r.stage > mine.stage) {
+      currentReviews[r.id] = { stage: r.stage, due: r.due, last: r.last };
+    }
+  }
+  saveReviews(currentReviews);
+
   return merged;
 }
 
