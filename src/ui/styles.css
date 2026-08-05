@@ -657,3 +657,12 @@ nav.top .btn { padding: 7px 13px; font-size: 13.5px; }
   .due { grid-template-columns: auto minmax(0, 1fr); }
   .due .btn { grid-column: 2; justify-self: start; }
 }
+
+/* The nudge rung of the help ladder. Plain prose, not code. */
+.answer-hint {
+  padding: var(--s3) var(--s4) var(--s4);
+  font-size: 14px; line-height: 1.6; color: var(--ink-2);
+  border-top: 1px solid var(--rule-2);
+}
+/* Blanks in a skeleton should read as gaps to fill, not as content. */
+.answer pre { tab-size: 2; }

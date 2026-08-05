@@ -209,6 +209,24 @@ export function recordReview(problemId: string, correct: boolean): void {
   saveReviews(reviews);
 }
 
+/**
+ * How much help a problem needed, the first time it was solved. Kept so a
+ * problem solved unaided can be told apart from one that needed the full
+ * answer — review should come back to the second sort sooner.
+ */
+const HELP_KEY = "sqlgym-help-v1";
+export const loadHelpUsed = (): Record<string, number> => {
+  try { return JSON.parse(localStorage.getItem(HELP_KEY) ?? "{}"); } catch { return {}; }
+};
+export function recordHelpUsed(problemId: string, level: number): void {
+  const all = loadHelpUsed();
+  const key = baseId(problemId);
+  // Keep the worst, not the latest: needing the answer once is the fact worth
+  // remembering, and a later unaided solve is what graduation already tracks.
+  all[key] = Math.max(all[key] ?? 0, level);
+  localStorage.setItem(HELP_KEY, JSON.stringify(all));
+}
+
 /** Solve days, for the streak and for export. */
 export const loadDays = (): string[] => {
   try { return JSON.parse(localStorage.getItem(DAYS_KEY) ?? "[]"); } catch { return []; }

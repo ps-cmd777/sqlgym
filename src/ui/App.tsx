@@ -11,10 +11,11 @@ import { explainError } from "../grader/explain";
 import { gradeProblem, type GradeOutcome } from "../grader/grader";
 import {
   currentStreak, DiffBadge, loadDays, loadProgress, loadReviews, Markdown,
-  mergeProgress, recordReview, recordSolveDay, ResultTable, saveProgress,
-  VerdictBox, type Progress,
+  mergeProgress, recordHelpUsed, recordReview, recordSolveDay, ResultTable,
+  saveProgress, VerdictBox, type Progress,
 } from "./bits";
 import { dueIds, pickForReview } from "../progress/review";
+import { skeleton } from "../content/skeleton";
 import { decodeProgress, encodeProgress } from "../progress/portable";
 
 type Route =
@@ -369,6 +370,9 @@ function ExpectedOutput({ problem }: { problem: Problem }) {
   );
 }
 
+/** The help ladder. Each rung is a smaller step than "show me the answer". */
+const HELP_LABELS = ["Stuck? Get a nudge", "Show the shape", "Show the answer"];
+
 function Workspace({
   problem, onGraded, hideHelp, draftKey, mod,
 }: {
@@ -385,8 +389,9 @@ function Workspace({
   const [result, setResult] = useState<QueryResult | null>(null);
   const [outcome, setOutcome] = useState<GradeOutcome | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [showHint, setShowHint] = useState(false);
-  const [showSolution, setShowSolution] = useState(false);
+  // 0 none · 1 nudge · 2 skeleton · 3 full answer. Recorded on submit so a
+  // problem solved unaided can be told apart from one that needed the answer.
+  const [help, setHelp] = useState(0);
 
   const codeRef = React.useRef(code);
   const runningRef = React.useRef(running);
@@ -425,6 +430,7 @@ function Workspace({
     setRunning(true); setError(null);
     try {
       const graded = await gradeProblem(problem, code);
+      if (graded.verdict.correct) recordHelpUsed(problem.id, help);
       setOutcome(graded);
       setResult(graded.error ? null : graded.visible);
       setError(graded.error ?? null);
@@ -443,15 +449,6 @@ function Workspace({
         {problem.kind === "dml" && (
           <p className="dml-note">✎ Your statements run on a fresh copy of the database.
           Grading verifies the resulting state — here and on a hidden copy.</p>
-        )}
-        {!hideHelp && (
-          <div className="reveal">
-            {/* The answer itself now lives next to Submit, so this is just the
-                nudge that comes before it. */}
-            {!showHint
-              ? <button className="btn ghost" onClick={() => setShowHint(true)}>Show hint</button>
-              : <p className="prompt" style={{ marginTop: 8 }}>💡 {problem.hint}</p>}
-          </div>
         )}
         {!hideHelp && (
           <details className="disc">
@@ -485,27 +482,41 @@ function Workspace({
               {running ? "…" : "Submit"}
             </button>
             {/* Learning mode only. Interview mode passes hideHelp and never
-                offers the answer — that is the whole point of the rehearsal. */}
-            {!hideHelp && !showSolution && (
-              <button className="btn ghost" onClick={() => setShowSolution(true)}>
-                Show answer
+                offers help of any kind — that is the point of the rehearsal. */}
+            {!hideHelp && help < 3 && (
+              <button className="btn ghost" onClick={() => setHelp((h) => h + 1)}>
+                {HELP_LABELS[help]}
               </button>
             )}
             <span className="spacer" />
             {result && <span className="ms">{result.rows.length} row(s) · {result.elapsedMs}ms</span>}
             <span className="kbd" title="Submit">⌘↵</span>
           </div>
-          {!hideHelp && showSolution && (
+          {!hideHelp && help > 0 && (
             <div className="answer">
               <div className="answer-hd">
-                <span>Worked answer</span>
-                <button className="btn ghost" onClick={() => setShowSolution(false)}>Hide</button>
+                <span>{["", "Nudge", "The shape of it", "Worked answer"][help]}</span>
+                <button className="btn ghost" onClick={() => setHelp(0)}>Hide</button>
               </div>
-              <pre>{problem.solution}</pre>
-              <p className="answer-note">
-                Reading it is not the same as writing it. Close this, clear the editor and
-                type it out yourself before moving on.
-              </p>
+              {help === 1 && <p className="answer-hint">{problem.hint}</p>}
+              {help === 2 && (
+                <>
+                  <pre>{skeleton(problem.solution)}</pre>
+                  <p className="answer-note">
+                    Every blank is a name or a value you have to work out. The keywords
+                    are the answer to "what kind of query is this".
+                  </p>
+                </>
+              )}
+              {help === 3 && (
+                <>
+                  <pre>{problem.solution}</pre>
+                  <p className="answer-note">
+                    Reading it is not the same as writing it. Hide this, clear the editor
+                    and type it out yourself before moving on.
+                  </p>
+                </>
+              )}
             </div>
           )}
         </div>
