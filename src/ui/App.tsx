@@ -90,19 +90,26 @@ export default function App() {
 }
 
 function Home({ progress, onProgressChanged }: { progress: Progress; onProgressChanged: () => void }) {
-  const solved = Object.values(progress).filter((s) => s === "solved").length;
-  const total = MODULES.reduce((n, m) => n + m.problems.length, 0);
-  const hard = MODULES.flatMap((m) => m.problems)
-    .filter((p) => p.difficulty === 4 && progress[p.id] === "solved").length;
   const streak = currentStreak();
 
-  // The one thing the dashboard should answer: what do I do next? Find the
-  // first unsolved problem and the module it sits in, so the focal card can
-  // say where you are rather than just linking somewhere.
+  // The Core Path is the product; the other 145 problems are a library behind
+  // it. Leading with 185 made the first number a learner saw a mountain.
+  const corePath = MODULES.flatMap((m) => m.problems).filter((p) => p.core);
+  const coreDone = corePath.filter((p) => progress[p.id] === "solved").length;
+  const minutesLeft = corePath
+    .filter((p) => progress[p.id] !== "solved")
+    .reduce((n, p) => n + estMinutes(p.difficulty), 0);
+
+  // What do I do next? The next unsolved problem on the Core Path, and the
+  // module it sits in, so the card can say where you are rather than just
+  // linking somewhere.
   const next = (() => {
     for (const m of MODULES) {
-      const i = m.problems.findIndex((p) => progress[p.id] !== "solved");
-      if (i !== -1) return { mod: m, problem: m.problems[i], index: i };
+      const i = m.problems.findIndex((p) => p.core && progress[p.id] !== "solved");
+      if (i !== -1) {
+        const coreIndex = corePath.findIndex((p) => p.id === m.problems[i].id);
+        return { mod: m, problem: m.problems[i], index: i, coreIndex };
+      }
     }
     return null;
   })();
@@ -113,18 +120,18 @@ function Home({ progress, onProgressChanged }: { progress: Progress; onProgressC
         <section className="resume" onClick={() => (location.hash = `#/p/${next.problem.id}`)}>
           <div className="resume-main">
             <span className="resume-kicker">
-              {solved ? "Continue" : "Start here"} · {next.mod.title}
+              {coreDone ? "Continue" : "Start here"} · {next.mod.title}
             </span>
             <h1>{next.problem.title}</h1>
             <div className="resume-meta">
               <DiffBadge d={next.problem.difficulty} />
-              <span>Problem {next.index + 1} of {next.mod.problems.length}</span>
+              <span>Step {next.coreIndex + 1} of {corePath.length}</span>
               <span>~{estMinutes(next.problem.difficulty)} min (estimate)</span>
               {next.problem.interview && <span className="tag-int">Appears in interview mode</span>}
             </div>
           </div>
           <div className="resume-go">
-            <span className="btn primary">{solved ? "Continue" : "Start"} →</span>
+            <span className="btn primary">{coreDone ? "Continue" : "Start"} →</span>
             <a className="resume-alt" href="#/interview" onClick={(e) => e.stopPropagation()}>
               or run a timed interview
             </a>
@@ -133,26 +140,35 @@ function Home({ progress, onProgressChanged }: { progress: Progress; onProgressC
       ) : (
         <section className="resume is-done">
           <div className="resume-main">
-            <span className="resume-kicker">All clear</span>
-            <h1>You have solved all {total} problems.</h1>
-            <div className="resume-meta"><span>Timed interview mode is the next challenge.</span></div>
+            <span className="resume-kicker">Core Path complete</span>
+            <h1>You have finished all {corePath.length} steps.</h1>
+            <div className="resume-meta">
+              <span>Timed interview mode is the real test. There are also
+              {" "}{MODULES.flatMap((m) => m.problems).length - corePath.length} more
+              problems if you want depth on a particular topic.</span>
+            </div>
           </div>
           <div className="resume-go"><a className="btn primary" href="#/interview">Interview mode →</a></div>
         </section>
       )}
 
       <div className="statline">
-        <span><b>{solved}</b>/{total} solved</span>
-        <span><b>{hard}</b> hard solved</span>
-        <span><b>{streak}</b> day streak{streak > 0 ? " 🔥" : ""}</span>
-        <a href="#/bank">All problems →</a>
+        <span><b>{coreDone}</b>/{corePath.length} on the Core Path</span>
+        {minutesLeft > 0 && (
+          <span>about <b>{Math.max(1, Math.round(minutesLeft / 60))}</b> hours left</span>
+        )}
+        {streak > 1 && <span><b>{streak}</b> days running</span>}
+        <a href="#/bank">Explore all 185 →</a>
       </div>
 
       {STAGE_ORDER.map((stage, si) => {
         const mods = MODULES.filter((m) => m.stage === stage);
         if (!mods.length) return null;
-        const sSolved = mods.reduce((n, m) => n + m.problems.filter((p) => progress[p.id] === "solved").length, 0);
-        const sTotal = mods.reduce((n, m) => n + m.problems.length, 0);
+        // Stage progress tracks the Core Path too, so the roadmap and the
+        // focal card can never disagree about how far along you are.
+        const stageCore = mods.flatMap((m) => m.problems).filter((p) => p.core);
+        const sSolved = stageCore.filter((p) => progress[p.id] === "solved").length;
+        const sTotal = stageCore.length;
         const complete = sSolved === sTotal;
         const current = mods.some((m) => m.id === next?.mod.id);
         return (
@@ -174,18 +190,34 @@ function Home({ progress, onProgressChanged }: { progress: Progress; onProgressC
             </div>
             <div className="modlist">
               {mods.map((m) => {
-                const done = m.problems.filter((p) => progress[p.id] === "solved").length;
-                const mastered = done === m.problems.length;
+                const mCore = m.problems.filter((p) => p.core);
+                const done = mCore.filter((p) => progress[p.id] === "solved").length;
+                const mastered = mCore.length > 0 && done === mCore.length;
+                const extra = m.problems.length - mCore.length;
                 const isNext = m.id === next?.mod.id;
                 return (
                   <a className="modrow" data-done={mastered} data-next={isNext}
+                     data-optional={mCore.length === 0}
                      href={`#/m/${m.id}`} key={m.id}>
                     <span className="modrow-mark">{mastered ? "✓" : isNext ? "▸" : ""}</span>
                     <span className="modrow-t">{m.title}</span>
                     <span className="modrow-b">{m.blurb}</span>
                     <span className="modrow-p">
-                      <span className="progress-bar"><i style={{ width: `${(done / m.problems.length) * 100}%` }} /></span>
-                      <span className="modrow-n">{mastered ? "mastered" : `${done}/${m.problems.length}`}</span>
+                      {/* A module with no Core Path step is genuinely optional
+                          depth, so it says so rather than showing 0/0. */}
+                      {mCore.length === 0 ? (
+                        <span className="modrow-opt">optional · {m.problems.length}</span>
+                      ) : (
+                        <>
+                          <span className="progress-bar">
+                            <i style={{ width: `${(done / mCore.length) * 100}%` }} />
+                          </span>
+                          <span className="modrow-n">
+                            {mastered ? "done" : `${done}/${mCore.length}`}
+                            {extra > 0 && <em> +{extra}</em>}
+                          </span>
+                        </>
+                      )}
                     </span>
                   </a>
                 );

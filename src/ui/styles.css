@@ -620,3 +620,12 @@ nav.top .btn { padding: 7px 13px; font-size: 13.5px; }
 .port-note { font-size: 13px; }
 .port-note.is-ok  { color: var(--accent-ink); }
 .port-note.is-bad { color: var(--bad); }
+
+/* Optional depth behind a module: "3/4 +9" reads as four core steps done and
+   nine more available, without giving the extras equal weight. */
+.modrow-n em { font-style: normal; color: var(--ink-4); font-weight: 400; }
+
+/* Modules that sit off the Core Path entirely. They are worth having and not
+   worth pretending are steps, so they carry a label rather than a 0/0 bar. */
+.modrow-opt { font: 400 11.5px/1 var(--mono); color: var(--ink-4); }
+.modrow[data-optional="true"] .modrow-t { font-weight: 500; color: var(--ink-2); }

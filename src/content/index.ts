@@ -41,8 +41,73 @@ function deriveTopics(sql: string): string[] {
 // problem were unrelated — and an invented claim has no place in a product
 // whose pitch is that every claim is checkable. Topics below are derived from
 // the actual solution SQL, so they cannot drift or be made up.
+/**
+ * The Core Path.
+ *
+ * 185 problems is a library, not a curriculum. Nobody finishes 185, and
+ * showing that number first makes the mountain the first thing a learner
+ * sees. These 40 are the shortest honest route from nothing to being able to
+ * hold your own in a SQL interview: one problem per distinct idea, chosen for
+ * how well it teaches rather than how hard it is.
+ *
+ * Everything not on this list stays available as optional depth. A learner
+ * who wants more joins practice can have thirteen; a learner who wants to be
+ * done can be done in forty.
+ */
+const CORE_PATH = new Set([
+  // Foundations — reading one table, and counting it
+  "wu1",  // SELECT specific columns
+  "wu3",  // WHERE on text
+  "wu8",  // ORDER BY DESC
+  "wu9",  // LIMIT, and why it needs ORDER BY
+  "wu11", // COUNT with a filter
+  "f5",   // SUM of an expression: multiply before you sum
+  "f4",   // GROUP BY with HAVING
+
+  // Core — missing values, more than one table, queries inside queries
+  "n1",   // IS NULL, not = NULL
+  "n2",   // COUNT(*) vs COUNT(col)
+  "n3",   // the NOT IN trap
+  "n5",   // NULLIF, safe division
+  "j1",   // inner join
+  "j2",   // anti-join: LEFT JOIN then IS NULL
+  "j4",   // LEFT JOIN counted correctly
+  "j5",   // fan-out: the join that doubles revenue
+  "s1",   // scalar subquery
+  "s3",   // NOT EXISTS
+  "x5",   // CASE
+
+  // Intermediate — naming results, looking across rows
+  "ga1",  // FILTER
+  "c1",   // a CTE
+  "w1",   // a first window function
+  "w2",   // ROW_NUMBER: latest row per group
+  "w3",   // top N per group
+  "w5",   // RANK vs DENSE_RANK, and ties
+  "w6",   // compare a row to its own group
+  "o2",   // running total
+  "o3",   // moving average and the frame clause
+  "o5",   // LAG and period-over-period growth
+
+  // Advanced — the shapes analysts actually ship
+  "ts1",  // date spine, so quiet days exist
+  "ts3",  // gaps and islands
+  "ts4",  // LATERAL, top N per group the other way
+  "dd2",  // deduplicate to one row per key
+  "h2",   // recursive CTE
+  "pv1",  // pivot
+  "st1",  // median via PERCENTILE_CONT
+
+  // Interview — mixed, and the questions companies actually ask
+  "a1",   // retention
+  "a3",   // funnel
+  "i1",   // top per group, under pressure
+  "i2",   // net revenue without double counting
+  "i5",   // consecutive periods
+]);
+
 function tag(p: Problem): Problem {
-  return { ...p, topics: deriveTopics(p.solution) };
+  return { ...p, topics: deriveTopics(p.solution), core: CORE_PATH.has(p.id) };
 }
 
 /**

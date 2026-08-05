@@ -19,6 +19,10 @@ export interface Problem {
   orderSensitive?: boolean;
   /** Eligible for timed interview mode. */
   interview?: boolean;
+  /** On the Core Path: the ~40 problems that take someone from nothing to
+   *  interview-capable. Assigned in content/index.ts. Everything else is
+   *  optional depth, reachable per stage or through Explore. */
+  core?: boolean;
   /** One sentence shown after a correct answer: the idea worth keeping, or the
    *  mistake most people make here. Optional — written where the concept
    *  genuinely trips people up, omitted where it would be filler. Supports
